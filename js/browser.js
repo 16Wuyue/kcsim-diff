@@ -32,6 +32,10 @@ function parseInput(str){
   return {kind:'bad',reason:'unrecognised'};
 }
 
+const MAX_B64  = 64*1024;
+const MAX_JSON = 8*1024*1024;
+const MAX_FILE = 2*1024*1024;
+
 function b64ToBytes(b64){
   const bin=atob(b64.replace(/\s+/g,''));
   const a=new Uint8Array(bin.length);
@@ -41,9 +45,12 @@ function b64ToBytes(b64){
 function unlzma(b64){
   return new Promise((ok,ng)=>{
     if(!root.LZMA)return ng(new Error('LZMA 未載入'));
+    if(b64.length>MAX_B64)return ng(new Error('too_large'));
     root.LZMA.decompress(b64ToBytes(b64),(res,err)=>{
       if(err)return ng(err);
-      ok(typeof res==='string'?res:new TextDecoder().decode(new Uint8Array(res)));
+      const txt=typeof res==='string'?res:new TextDecoder().decode(new Uint8Array(res));
+      if(txt.length>MAX_JSON)return ng(new Error('too_large'));
+      ok(txt);
     });
   });
 }
@@ -64,14 +71,18 @@ async function loadOne(input){
 /* .kcsim 備份檔：LZString → {data,source} → data 是 save JSON 的字串 */
 function loadFile(file){
   return new Promise((ok,ng)=>{
+    if(file.size>MAX_FILE)return ng(new Error('too_large'));
     const r=new FileReader();
     r.onerror=()=>ng(new Error('read_failed'));
     r.onload=()=>{
       try{
         if(!root.LZString)return ng(new Error('LZString 未載入'));
         const txt=root.LZString.decompressFromBase64(String(r.result).trim());
+        if(txt==null)return ng(new Error('not_kcsim'));
+        if(txt.length>MAX_JSON)return ng(new Error('too_large'));
         const wrap=JSON.parse(txt);
         if(!wrap||!wrap.data)return ng(new Error('not_kcsim'));
+        if(String(wrap.data).length>MAX_JSON)return ng(new Error('too_large'));
         ok({save:JSON.parse(wrap.data),id:null});
       }catch(e){ng(e);}
     };
