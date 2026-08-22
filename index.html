@@ -94,6 +94,13 @@ button{font:inherit;color:inherit;cursor:pointer}
 .lang button{border:0;background:var(--panel);padding:6px 9px;font-size:13px;color:var(--quiet)}
 .lang button[aria-pressed="true"]{background:var(--blue);color:#fff}
 
+.foot{margin:48px 0 0;padding:16px 4px 0;border-top:1px solid var(--line-soft);
+  color:var(--quiet);font-size:12.5px;line-height:1.9}
+.foot p{margin:0}
+.foot a{color:var(--blue);text-decoration:none}
+.foot a:hover{text-decoration:underline}
+.foot a:focus-visible{outline:1px solid var(--blue);outline-offset:2px}
+.foot .sep{opacity:.5;margin:0 6px}
 .status{padding:24px 4px;color:var(--quiet);font-size:14.5px}
 .status.err{color:var(--err)}
 .section-title{display:flex;align-items:baseline;gap:10px;padding:26px 0 10px}
@@ -298,6 +305,17 @@ html[data-ui="light"] .ic-node{filter:none}
 
 <div id="status" class="status"></div>
 <div id="body"></div>
+<footer class="foot">
+  <p><span data-t="foot_src">資料來源</span>
+    <a href="https://github.com/KC3Kai/kancolle-replay" target="_blank" rel="noopener noreferrer">KC3Kai/kancolle-replay</a>
+    <span class="sep">·</span><span data-t="foot_link">短連結還原</span>
+    <a href="https://kcrdb.hitomaru.dev" target="_blank" rel="noopener noreferrer">kcrdb</a></p>
+  <p data-t="foot_unofficial">非官方的第三方工具，與 KC3Kai、DMM GAMES、KADOKAWA 均無關聯。艦隊これくしょん的美術與資料版權屬於 DMM GAMES / KADOKAWA。</p>
+  <p><a href="https://github.com/16Wuyue/kcsim-diff/issues/new" target="_blank" rel="noopener noreferrer"
+      data-t="foot_issue">問題回報</a>
+    <span class="sep">·</span>
+    <a href="https://github.com/16Wuyue/kcsim-diff" target="_blank" rel="noopener noreferrer">GitHub</a></p>
+</footer>
 </main>
 <script>
 let CARDS={fleets:[],landBases:[],battles:[],settings:[]};
@@ -344,11 +362,11 @@ const OWN={
     sec_fleet:'編成與裝備',sec_enemy:'敵方設定',sec_setting:'模擬器設定',all:'全部差異',
     scope:'比較範圍',node:'戰鬥點',copy:'複製',copied:'已複製',nolink:'匯入檔案或長連結時無法產生比對連結',
     a_side:'A · 基準',b_side:'B · 對照',diffs:'{n} 處差異',ships_row:'點選艦娘展開完整對照',
-    swap:'換艦',pos:'位置 {a} → {b}',main:'主力',escort:'護衛',fleet_main:'本隊',fleet_supportN:'道中支援',fleet_supportB:'決戰支援',prof_img:'熟練度：圖示',nodiff:'無差異（{n} 項已比對）',nolink_why:'匯入的檔案與 #backup= 長連結的資料量太大，塞不進網址，所以無法產生比對連結。',det_id:'共享短連結',det_b64:'完整備份連結',det_file:'備份檔',det_bad:'無法辨識',zoom:'字級',idle:'貼入兩條共享連結，或匯入 .kcsim 檔案，再按「比對設定」。',loading:'載入中…',bad_input:'無法辨識的輸入：需要 ?s= 短連結、#backup= 長連結，或 .kcsim 檔案。',kcrdb_fail:'向 kcrdb 取資料失敗，請確認連結是否正確。',load_fail:'解碼失敗。',bad_file:'檔案不是有效的 .kcsim 備份。',file_ready:'已讀取 {n}，按「比對設定」繼續。',yes:'是',no:'否',sg_top:'總開關',sg_settings:'模擬器設定',sg_settingsFCF:'FCF 設定',sg_autoBonus:'自動加成',set_useSupportN:'使用道中支援',set_useSupportB:'使用決戰支援',set_useFF:'使用友軍艦隊',set_useDebuff:'套用減益',comp:'敵編成',rate:'出現權重',same_ships:'其餘 {n} 艘相同',only_side:'只存在於 {s}',bf_formation:'陣形',bf_nodeType:'戰鬥型態',bf_doNB:'夜戰',bf_doNBCond:'夜戰條件',bf_lbasWaves:'基地空襭波次',bf_subOnly:'僅潛水艦',bf_useNormalSupport:'一般支援',bf_useBalloon:'阻塞氣球',bf_useAtoll:'環礁',bf_useSmoke:'煙幕',bf_useAnchorageRepair:'泊地修理',bf_offrouteRate:'偏離航路率',bf_forceEngagement:'強制交戰型態',slots:'搭載數',equip1:'裝備1',equip2:'裝備2',equip3:'裝備3',equip4:'裝備4',equip5:'裝備5',theme_d:'深色',theme_l:'淺色',
+    swap:'換艦',pos:'位置 {a} → {b}',main:'主力',escort:'護衛',fleet_main:'本隊',fleet_supportN:'道中支援',fleet_supportB:'決戰支援',prof_img:'熟練度：圖示',nodiff:'無差異（{n} 項已比對）',foot_src:'資料來源',foot_link:'短連結還原',foot_issue:'問題回報',foot_unofficial:'非官方的第三方工具，與 KC3Kai、DMM GAMES、KADOKAWA 均無關聯。艦隊これくしょん的美術與資料版權屬於 DMM GAMES / KADOKAWA。',nolink_why:'匯入的檔案與 #backup= 長連結的資料量太大，塞不進網址，所以無法產生比對連結。',det_id:'共享短連結',det_b64:'完整備份連結',det_file:'備份檔',det_bad:'無法辨識',zoom:'字級',idle:'貼入兩條共享連結，或匯入 .kcsim 檔案，再按「比對設定」。',loading:'載入中…',bad_input:'無法辨識的輸入：需要 ?s= 短連結、#backup= 長連結，或 .kcsim 檔案。',kcrdb_fail:'向 kcrdb 取資料失敗，請確認連結是否正確。',load_fail:'解碼失敗。',bad_file:'檔案不是有效的 .kcsim 備份。',file_ready:'已讀取 {n}，按「比對設定」繼續。',yes:'是',no:'否',sg_top:'總開關',sg_settings:'模擬器設定',sg_settingsFCF:'FCF 設定',sg_autoBonus:'自動加成',set_useSupportN:'使用道中支援',set_useSupportB:'使用決戰支援',set_useFF:'使用友軍艦隊',set_useDebuff:'套用減益',comp:'敵編成',rate:'出現權重',same_ships:'其餘 {n} 艘相同',only_side:'只存在於 {s}',bf_formation:'陣形',bf_nodeType:'戰鬥型態',bf_doNB:'夜戰',bf_doNBCond:'夜戰條件',bf_lbasWaves:'基地空襭波次',bf_subOnly:'僅潛水艦',bf_useNormalSupport:'一般支援',bf_useBalloon:'阻塞氣球',bf_useAtoll:'環礁',bf_useSmoke:'煙幕',bf_useAnchorageRepair:'泊地修理',bf_offrouteRate:'偏離航路率',bf_forceEngagement:'強制交戰型態',slots:'搭載數',equip1:'裝備1',equip2:'裝備2',equip3:'裝備3',equip4:'裝備4',equip5:'裝備5',theme_d:'深色',theme_l:'淺色',
     prof_sym:'熟練度：符號',prof_num:'熟練度：數字',
     f1:'單縱陣',f2:'複縱陣',f3:'輪形陣',f4:'梯形陣',f5:'單橫陣',f6:'警戒陣',
     f11:'第一警戒航行序列',f12:'第二警戒航行序列',f13:'第三警戒航行序列',f14:'第四警戒航行序列'},
-  ja:{base:'基準設定',cmp:'比較設定',run:'比較する',show:'表示',onlydiff:'差分のない艦を隠す',
+  ja:{foot_src:'データ提供',foot_link:'短縮リンク復元',foot_issue:'不具合報告',foot_unofficial:'本ツールは非公式のサードパーティ製であり、KC3Kai・DMM GAMES・KADOKAWA とは無関係です。艦これの画像・データの著作権は DMM GAMES / KADOKAWA に帰属します。',base:'基準設定',cmp:'比較設定',run:'比較する',show:'表示',onlydiff:'差分のない艦を隠す',
     hint:'共有リンク・バックアップリンク・.kcsim ファイルに対応。データはブラウザ内でのみ処理されます。',
     sec_fleet:'編成と装備',sec_enemy:'敵設定',sec_setting:'シミュレータ設定',all:'すべての差分',
     scope:'比較範囲',copy:'コピー',copied:'コピー済み',nolink:'ファイル読込・長いリンクでは比較リンクを生成できません',
@@ -362,7 +380,7 @@ const OWN={
     sec_fleet:'Fleet & Equipment',sec_enemy:'Enemy Setup',sec_setting:'Simulator Settings',all:'All differences',
     scope:'Scope',copy:'Copy',copied:'Copied',nolink:'No compare link for imported files or long links',
     a_side:'A · Base',b_side:'B · Compare',diffs:'{n} changes',ships_row:'Click a ship for the full comparison',
-    swap:'Ship swap',pos:'Slot {a} → {b}',main:'Main',escort:'Escort',fleet_main:'Main Fleet',fleet_supportN:'Support (Normal)',fleet_supportB:'Support (Boss)',prof_img:'Proficiency: icons',nodiff:'No differences ({n} compared)',nolink_why:'Imported files and #backup= links carry too much data to fit in a URL, so no compare link can be generated.',det_id:'Share link',det_b64:'Backup link',det_file:'Backup file',det_bad:'Unrecognised',zoom:'Text size',idle:'Paste two share links, or import .kcsim files, then press Compare.',loading:'Loading…',bad_input:'Unrecognised input. Accepts ?s= links, #backup= links, or .kcsim files.',kcrdb_fail:'Could not fetch from kcrdb. Check the link.',load_fail:'Failed to decode.',bad_file:'Not a valid .kcsim backup.',file_ready:'Loaded {n}. Press Compare to continue.',yes:'Yes',no:'No',sg_top:'Global switches',sg_settings:'Simulator settings',sg_settingsFCF:'FCF settings',sg_autoBonus:'Auto bonus',set_useSupportN:'Use support (normal)',set_useSupportB:'Use support (boss)',set_useFF:'Use friend fleet',set_useDebuff:'Apply debuff',comp:'Enemy comp',rate:'Spawn weight',same_ships:'{n} other ships identical',only_side:'Only in {s}',bf_formation:'Formation',bf_nodeType:'Battle type',bf_doNB:'Night battle',bf_doNBCond:'Night battle cond.',bf_lbasWaves:'LBAS waves',bf_subOnly:'Subs only',bf_useNormalSupport:'Support',bf_useBalloon:'Barrage balloon',bf_useAtoll:'Atoll',bf_useSmoke:'Smoke',bf_useAnchorageRepair:'Anchorage repair',bf_offrouteRate:'Off-route rate',bf_forceEngagement:'Forced engagement',slots:'Slot size',equip1:'Equip 1',equip2:'Equip 2',equip3:'Equip 3',equip4:'Equip 4',equip5:'Equip 5',theme_d:'Dark',theme_l:'Light',
+    swap:'Ship swap',pos:'Slot {a} → {b}',main:'Main',escort:'Escort',fleet_main:'Main Fleet',fleet_supportN:'Support (Normal)',fleet_supportB:'Support (Boss)',prof_img:'Proficiency: icons',nodiff:'No differences ({n} compared)',foot_src:'Data from',foot_link:'Short links via',foot_issue:'Report an issue',foot_unofficial:'An unofficial third-party tool, not affiliated with or endorsed by KC3Kai, DMM GAMES or KADOKAWA. KanColle artwork and data are copyright DMM GAMES / KADOKAWA.',nolink_why:'Imported files and #backup= links carry too much data to fit in a URL, so no compare link can be generated.',det_id:'Share link',det_b64:'Backup link',det_file:'Backup file',det_bad:'Unrecognised',zoom:'Text size',idle:'Paste two share links, or import .kcsim files, then press Compare.',loading:'Loading…',bad_input:'Unrecognised input. Accepts ?s= links, #backup= links, or .kcsim files.',kcrdb_fail:'Could not fetch from kcrdb. Check the link.',load_fail:'Failed to decode.',bad_file:'Not a valid .kcsim backup.',file_ready:'Loaded {n}. Press Compare to continue.',yes:'Yes',no:'No',sg_top:'Global switches',sg_settings:'Simulator settings',sg_settingsFCF:'FCF settings',sg_autoBonus:'Auto bonus',set_useSupportN:'Use support (normal)',set_useSupportB:'Use support (boss)',set_useFF:'Use friend fleet',set_useDebuff:'Apply debuff',comp:'Enemy comp',rate:'Spawn weight',same_ships:'{n} other ships identical',only_side:'Only in {s}',bf_formation:'Formation',bf_nodeType:'Battle type',bf_doNB:'Night battle',bf_doNBCond:'Night battle cond.',bf_lbasWaves:'LBAS waves',bf_subOnly:'Subs only',bf_useNormalSupport:'Support',bf_useBalloon:'Barrage balloon',bf_useAtoll:'Atoll',bf_useSmoke:'Smoke',bf_useAnchorageRepair:'Anchorage repair',bf_offrouteRate:'Off-route rate',bf_forceEngagement:'Forced engagement',slots:'Slot size',equip1:'Equip 1',equip2:'Equip 2',equip3:'Equip 3',equip4:'Equip 4',equip5:'Equip 5',theme_d:'Dark',theme_l:'Light',
     prof_sym:'Proficiency: symbols',prof_num:'Proficiency: numbers',
     f1:'Line Ahead',f2:'Double Line',f3:'Diamond',f4:'Echelon',f5:'Line Abreast',f6:'Vanguard',
     f11:'Cruising 1',f12:'Cruising 2',f13:'Cruising 3',f14:'Cruising 4'}
