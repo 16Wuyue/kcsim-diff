@@ -47,7 +47,15 @@ button{font:inherit;color:inherit;cursor:pointer}
   padding:20px 0 18px;border-bottom:1px solid var(--line-soft)}
 .source label{display:block;color:var(--quiet);font-size:11px;font-weight:700;letter-spacing:.1em;margin:0 0 5px}
 .source label b{color:var(--text)}
-.url{height:38px;width:100%;outline:none;border:1px solid var(--line);background:var(--field);border-radius:4px;padding:9px 10px;
+.inwrap{position:relative}
+.clr{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:none;
+  color:var(--quiet);font-size:16px;line-height:1;padding:2px 5px;border-radius:3px;display:none}
+.clr:hover{color:var(--text);background:var(--line-soft)}
+.inwrap.filled .clr{display:block}
+.det{font:10.5px/1.6 Consolas,monospace;color:var(--quiet);min-height:17px;padding:2px 2px 0}
+.det.ok{color:var(--add,#3fb950)} .det.bad{color:var(--del,#f48771)} .det.file{color:var(--amber)}
+.inwrap.drop .url{border-color:var(--amber);background:var(--amber-bg)}
+.url{height:38px;width:100%;outline:none;padding-right:26px;border:1px solid var(--line);background:var(--field);border-radius:4px;padding:9px 10px;
   color:#aeb6c1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-family:Consolas,monospace;font-size:12px}
 :root[data-ui="light"] .url{color:#4a5157}
 .join{align-self:end;height:38px;display:flex;align-items:center;justify-content:center;
@@ -68,8 +76,12 @@ button{font:inherit;color:inherit;cursor:pointer}
   padding:10px 0;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
 .section{font-size:12px;color:var(--muted);margin-right:5px}
 .filter,.toggle{border:1px solid var(--line);border-radius:4px;background:var(--panel);padding:6px 10px;font-size:13px}
-.filter.on{color:var(--amber);border-color:var(--amber-line);background:var(--amber-bg)}
+.filter.on,.toggle[aria-pressed="true"]{color:var(--amber);border-color:var(--amber-line);
+  background:var(--amber-bg)}
 .spacer{flex:1}
+.zoombox{display:flex;align-items:center;gap:4px}
+.zbtn{min-width:30px;text-align:center}
+.zval{font:10.5px/1 Consolas,monospace;color:var(--quiet);min-width:34px;text-align:center}
 .switch{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:13px;border:0;background:none}
 .switch i{display:inline-block;width:27px;height:15px;border-radius:9px;background:var(--line);position:relative;
   transition:background .15s}
@@ -110,6 +122,9 @@ html[data-ui="light"] .ic-node{filter:none}
 .formbox{display:inline-flex;align-items:center;gap:6px;margin-left:8px}
 .formbox .arrow{color:var(--quiet);font-size:11px;margin:0 4px}
 .formbox{font-size:11.5px;color:var(--muted);font-weight:400;letter-spacing:0}
+.gbadge{margin-left:8px;font:400 11px/1.6 inherit;letter-spacing:0;padding:1px 7px;border-radius:3px;
+  border:1px solid var(--line);color:var(--quiet);white-space:nowrap}
+.gbadge.changed,.gbadge.only{border-color:var(--amber-line);color:var(--amber);background:var(--amber-bg)}
 .formbox.changed{padding:1px 5px;border:1px solid var(--amber-line);border-radius:3px;background:var(--amber-bg)}
 .group{border-top:1px solid var(--line);padding-top:13px;margin-top:16px}
 .group-title{font-size:12px;font-weight:700;letter-spacing:.09em;color:var(--muted);margin:0 0 8px}
@@ -248,11 +263,17 @@ html[data-ui="light"] .ic-node{filter:none}
 </header>
 
 <section class="import">
-  <div class="source"><label><b>A</b> · <span data-t="base">基準設定</span></label>
-    <input class="url" id="inA" spellcheck="false" placeholder="?s=... / #backup=... "></div>
+  <div class="source" id="srcA"><label><b>A</b> · <span data-t="base">基準設定</span></label>
+    <div class="inwrap"><input class="url" id="inA" spellcheck="false" autocomplete="off"
+      placeholder="?s=... / #backup=... / 拖入 .kcsim"><button class="clr" type="button" data-for="inA"
+      aria-label="clear">&times;</button></div>
+    <div class="det" id="detA"></div></div>
   <div class="join">⇄</div>
-  <div class="source"><label><b>B</b> · <span data-t="cmp">對照設定</span></label>
-    <input class="url" id="inB" spellcheck="false" placeholder="?s=... / #backup=... "></div>
+  <div class="source" id="srcB"><label><b>B</b> · <span data-t="cmp">對照設定</span></label>
+    <div class="inwrap"><input class="url" id="inB" spellcheck="false" autocomplete="off"
+      placeholder="?s=... / #backup=... / 拖入 .kcsim"><button class="clr" type="button" data-for="inB"
+      aria-label="clear">&times;</button></div>
+    <div class="det" id="detB"></div></div>
   <button class="run" type="button" id="btnRun" data-t="run">比對設定</button>
   <div class="filebtns"><button class="act" type="button" id="btnFileA">A ← .kcsim</button><button class="act" type="button" id="btnFileB">B ← .kcsim</button><input type="file" id="filePick" accept=".kcsim,application/json" style="display:none"></div><p class="hint" data-t="hint">支援共享連結、完整備份連結或 .kcsim 檔案。資料只在瀏覽器中處理。</p>
 </section>
@@ -263,8 +284,11 @@ html[data-ui="light"] .ic-node{filter:none}
   <span class="section" data-t="show">顯示</span>
   <span id="filters"></span>
   <span class="spacer"></span>
-  <button class="toggle" type="button" id="profMode">熟練度：符號</button>
-  <button class="toggle" type="button" id="swapAB">A ⇄ B</button>
+  <span class="zoombox"><button class="toggle zbtn" type="button" id="zoomOut" aria-label="smaller">A&minus;</button>
+<span class="zval" id="zoomVal">100%</span>
+<button class="toggle zbtn" type="button" id="zoomIn" aria-label="larger">A+</button></span>
+<button class="toggle" type="button" id="profMode">熟練度：符號</button>
+  <button class="toggle" type="button" id="swapAB" aria-pressed="false">A ⇄ B</button>
   <button class="switch" type="button" id="onlyDiff" aria-pressed="true"><span data-t="onlydiff">隱藏無差異艦</span> <i></i></button>
 </div>
 
@@ -316,7 +340,7 @@ const OWN={
     sec_fleet:'編成與裝備',sec_enemy:'敵方設定',sec_setting:'模擬器設定',all:'全部差異',
     scope:'比較範圍',node:'戰鬥點',copy:'複製',copied:'已複製',nolink:'匯入檔案或長連結時無法產生比對連結',
     a_side:'A · 基準',b_side:'B · 對照',diffs:'{n} 處差異',ships_row:'點選艦娘展開完整對照',
-    swap:'換艦',pos:'位置 {a} → {b}',main:'主力',escort:'護衛',fleet_main:'本隊',fleet_supportN:'道中支援',fleet_supportB:'決戰支援',prof_img:'熟練度：圖示',nodiff:'無差異（{n} 項已比對）',idle:'貼入兩條共享連結，或匯入 .kcsim 檔案，再按「比對設定」。',loading:'載入中…',bad_input:'無法辨識的輸入：需要 ?s= 短連結、#backup= 長連結，或 .kcsim 檔案。',kcrdb_fail:'向 kcrdb 取資料失敗，請確認連結是否正確。',load_fail:'解碼失敗。',bad_file:'檔案不是有效的 .kcsim 備份。',file_ready:'已讀取 {n}，按「比對設定」繼續。',yes:'是',no:'否',sg_top:'總開關',sg_settings:'模擬器設定',sg_settingsFCF:'FCF 設定',sg_autoBonus:'自動加成',set_useSupportN:'使用道中支援',set_useSupportB:'使用決戰支援',set_useFF:'使用友軍艦隊',set_useDebuff:'套用減益',comp:'敵編成',rate:'出現權重',same_ships:'其餘 {n} 艘相同',only_side:'只存在於 {s}',bf_formation:'陣形',bf_nodeType:'戰鬥型態',bf_doNB:'夜戰',bf_doNBCond:'夜戰條件',bf_lbasWaves:'基地空襭波次',bf_subOnly:'僅潛水艦',bf_useNormalSupport:'一般支援',bf_useBalloon:'阻塞氣球',bf_useAtoll:'環礁',bf_useSmoke:'煙幕',bf_useAnchorageRepair:'泊地修理',bf_offrouteRate:'偏離航路率',bf_forceEngagement:'強制交戰型態',slots:'搭載數',equip1:'裝備1',equip2:'裝備2',equip3:'裝備3',equip4:'裝備4',equip5:'裝備5',theme_d:'深色',theme_l:'淺色',
+    swap:'換艦',pos:'位置 {a} → {b}',main:'主力',escort:'護衛',fleet_main:'本隊',fleet_supportN:'道中支援',fleet_supportB:'決戰支援',prof_img:'熟練度：圖示',nodiff:'無差異（{n} 項已比對）',nolink_why:'匯入的檔案與 #backup= 長連結的資料量太大，塞不進網址，所以無法產生比對連結。',det_id:'共享短連結',det_b64:'完整備份連結',det_file:'備份檔',det_bad:'無法辨識',zoom:'字級',idle:'貼入兩條共享連結，或匯入 .kcsim 檔案，再按「比對設定」。',loading:'載入中…',bad_input:'無法辨識的輸入：需要 ?s= 短連結、#backup= 長連結，或 .kcsim 檔案。',kcrdb_fail:'向 kcrdb 取資料失敗，請確認連結是否正確。',load_fail:'解碼失敗。',bad_file:'檔案不是有效的 .kcsim 備份。',file_ready:'已讀取 {n}，按「比對設定」繼續。',yes:'是',no:'否',sg_top:'總開關',sg_settings:'模擬器設定',sg_settingsFCF:'FCF 設定',sg_autoBonus:'自動加成',set_useSupportN:'使用道中支援',set_useSupportB:'使用決戰支援',set_useFF:'使用友軍艦隊',set_useDebuff:'套用減益',comp:'敵編成',rate:'出現權重',same_ships:'其餘 {n} 艘相同',only_side:'只存在於 {s}',bf_formation:'陣形',bf_nodeType:'戰鬥型態',bf_doNB:'夜戰',bf_doNBCond:'夜戰條件',bf_lbasWaves:'基地空襭波次',bf_subOnly:'僅潛水艦',bf_useNormalSupport:'一般支援',bf_useBalloon:'阻塞氣球',bf_useAtoll:'環礁',bf_useSmoke:'煙幕',bf_useAnchorageRepair:'泊地修理',bf_offrouteRate:'偏離航路率',bf_forceEngagement:'強制交戰型態',slots:'搭載數',equip1:'裝備1',equip2:'裝備2',equip3:'裝備3',equip4:'裝備4',equip5:'裝備5',theme_d:'深色',theme_l:'淺色',
     prof_sym:'熟練度：符號',prof_num:'熟練度：數字',
     f1:'單縱陣',f2:'複縱陣',f3:'輪形陣',f4:'梯形陣',f5:'單橫陣',f6:'警戒陣',
     f11:'第一警戒航行序列',f12:'第二警戒航行序列',f13:'第三警戒航行序列',f14:'第四警戒航行序列'},
@@ -334,7 +358,7 @@ const OWN={
     sec_fleet:'Fleet & Equipment',sec_enemy:'Enemy Setup',sec_setting:'Simulator Settings',all:'All differences',
     scope:'Scope',copy:'Copy',copied:'Copied',nolink:'No compare link for imported files or long links',
     a_side:'A · Base',b_side:'B · Compare',diffs:'{n} changes',ships_row:'Click a ship for the full comparison',
-    swap:'Ship swap',pos:'Slot {a} → {b}',main:'Main',escort:'Escort',fleet_main:'Main Fleet',fleet_supportN:'Support (Normal)',fleet_supportB:'Support (Boss)',prof_img:'Proficiency: icons',nodiff:'No differences ({n} compared)',idle:'Paste two share links, or import .kcsim files, then press Compare.',loading:'Loading…',bad_input:'Unrecognised input. Accepts ?s= links, #backup= links, or .kcsim files.',kcrdb_fail:'Could not fetch from kcrdb. Check the link.',load_fail:'Failed to decode.',bad_file:'Not a valid .kcsim backup.',file_ready:'Loaded {n}. Press Compare to continue.',yes:'Yes',no:'No',sg_top:'Global switches',sg_settings:'Simulator settings',sg_settingsFCF:'FCF settings',sg_autoBonus:'Auto bonus',set_useSupportN:'Use support (normal)',set_useSupportB:'Use support (boss)',set_useFF:'Use friend fleet',set_useDebuff:'Apply debuff',comp:'Enemy comp',rate:'Spawn weight',same_ships:'{n} other ships identical',only_side:'Only in {s}',bf_formation:'Formation',bf_nodeType:'Battle type',bf_doNB:'Night battle',bf_doNBCond:'Night battle cond.',bf_lbasWaves:'LBAS waves',bf_subOnly:'Subs only',bf_useNormalSupport:'Support',bf_useBalloon:'Barrage balloon',bf_useAtoll:'Atoll',bf_useSmoke:'Smoke',bf_useAnchorageRepair:'Anchorage repair',bf_offrouteRate:'Off-route rate',bf_forceEngagement:'Forced engagement',slots:'Slot size',equip1:'Equip 1',equip2:'Equip 2',equip3:'Equip 3',equip4:'Equip 4',equip5:'Equip 5',theme_d:'Dark',theme_l:'Light',
+    swap:'Ship swap',pos:'Slot {a} → {b}',main:'Main',escort:'Escort',fleet_main:'Main Fleet',fleet_supportN:'Support (Normal)',fleet_supportB:'Support (Boss)',prof_img:'Proficiency: icons',nodiff:'No differences ({n} compared)',nolink_why:'Imported files and #backup= links carry too much data to fit in a URL, so no compare link can be generated.',det_id:'Share link',det_b64:'Backup link',det_file:'Backup file',det_bad:'Unrecognised',zoom:'Text size',idle:'Paste two share links, or import .kcsim files, then press Compare.',loading:'Loading…',bad_input:'Unrecognised input. Accepts ?s= links, #backup= links, or .kcsim files.',kcrdb_fail:'Could not fetch from kcrdb. Check the link.',load_fail:'Failed to decode.',bad_file:'Not a valid .kcsim backup.',file_ready:'Loaded {n}. Press Compare to continue.',yes:'Yes',no:'No',sg_top:'Global switches',sg_settings:'Simulator settings',sg_settingsFCF:'FCF settings',sg_autoBonus:'Auto bonus',set_useSupportN:'Use support (normal)',set_useSupportB:'Use support (boss)',set_useFF:'Use friend fleet',set_useDebuff:'Apply debuff',comp:'Enemy comp',rate:'Spawn weight',same_ships:'{n} other ships identical',only_side:'Only in {s}',bf_formation:'Formation',bf_nodeType:'Battle type',bf_doNB:'Night battle',bf_doNBCond:'Night battle cond.',bf_lbasWaves:'LBAS waves',bf_subOnly:'Subs only',bf_useNormalSupport:'Support',bf_useBalloon:'Barrage balloon',bf_useAtoll:'Atoll',bf_useSmoke:'Smoke',bf_useAnchorageRepair:'Anchorage repair',bf_offrouteRate:'Off-route rate',bf_forceEngagement:'Forced engagement',slots:'Slot size',equip1:'Equip 1',equip2:'Equip 2',equip3:'Equip 3',equip4:'Equip 4',equip5:'Equip 5',theme_d:'Dark',theme_l:'Light',
     prof_sym:'Proficiency: symbols',prof_num:'Proficiency: numbers',
     f1:'Line Ahead',f2:'Double Line',f3:'Diamond',f4:'Echelon',f5:'Line Abreast',f6:'Vanguard',
     f11:'Cruising 1',f12:'Cruising 2',f13:'Cruising 3',f14:'Cruising 4'}
@@ -511,12 +535,23 @@ function renderFleet(host){
     }
     const title=$('div','group-title');
     title.append(document.createTextNode(T('fleet_'+fl.key)+' · '+T(g.tag)+'　'));
-    if(fl.formA!=null&&g.tag==='main'){
-      const fa=SWAP?fl.formB:fl.formA, fv=SWAP?fl.formA:fl.formB;
-      const fb=$('span','formbox'+(fa!==fv?' changed':''));
-      fb.append($('span',null,T('f'+fa)));
-      if(fa!==fv){fb.append($('span','arrow','→'),$('span',null,T('f'+fv)));}
-      title.append(fb);
+    if(g.tag==='main'){
+      const hasA=SWAP?fl.hasB:fl.hasA, hasB=SWAP?fl.hasA:fl.hasB;
+      if(!hasA||!hasB){
+        /* 整支艦隊只存在於一側時不比陣形——另一側根本沒有陣形可比 */
+        title.append($('span','gbadge only',T('only_side',{s:hasA?'A':'B'})));
+      }else if(fl.formA!=null&&fl.formB!=null){
+        const fa=SWAP?fl.formB:fl.formA, fv=SWAP?fl.formA:fl.formB;
+        const fb=$('span','formbox'+(fa!==fv?' changed':''));
+        fb.append($('span',null,T('f'+fa)));
+        if(fa!==fv){fb.append($('span','arrow','→'),$('span',null,T('f'+fv)));}
+        title.append(fb);
+      }
+      if(fl.useKey){
+        const ua=SWAP?fl.useB:fl.useA, ub=SWAP?fl.useA:fl.useB;
+        if(ua!==ub)title.append($('span','gbadge changed',
+          T('set_'+fl.useKey)+'：'+fmtVal(ua)+' → '+fmtVal(ub)));
+      }
     }
     title.append($('span',null,'　'+T('ships_row'))); sec.append(title);
     const grid=$('div','fleet-grid');
@@ -671,6 +706,7 @@ function render(){
     const b=$('button','filter'+(SEC===s.id?' on':'')); b.type='button'; b.textContent=T(s.k);
     b.onclick=()=>{SEC=s.id;render();}; fl.append(b);
   }
+  document.getElementById('zoomVal').title=T('zoom');
   document.getElementById('profMode').textContent=T(PROFMODE==='img'?'prof_img':(PROFMODE==='sym'?'prof_sym':'prof_num'));
   document.getElementById('theme').textContent=T(root.getAttribute('data-ui')==='light'?'theme_l':'theme_d');
   document.getElementById('copyLink').textContent=T('copy');
@@ -696,7 +732,8 @@ document.getElementById('theme').onclick=()=>{
 if(localStorage.getItem('kcdiff-theme')==='light')root.setAttribute('data-ui','light');
 document.getElementById('profMode').onclick=()=>{PROFMODE=PROFMODE==='img'?'sym':(PROFMODE==='sym'?'num':'img');
   localStorage.setItem('kcdiff-prof',PROFMODE);render();};
-document.getElementById('swapAB').onclick=()=>{SWAP=!SWAP;render();};
+document.getElementById('swapAB').onclick=e=>{SWAP=!SWAP;
+  e.currentTarget.setAttribute('aria-pressed',String(SWAP));render();};
 document.getElementById('onlyDiff').onclick=e=>{ONLY=!ONLY;
   e.currentTarget.setAttribute('aria-pressed',String(ONLY));render();};
 
@@ -719,6 +756,9 @@ function updateShare(){
   const url=shareLink();
   document.getElementById('shareUrl').textContent=url||T('nolink');
   document.getElementById('linkbox').classList.toggle('off',!url);
+  const cb=document.getElementById('copyLink');
+  cb.disabled=!url;
+  cb.title=url?'':T('nolink_why');
   return url;
 }
 const ERRMSG={empty:'empty',unrecognised:'bad_input',unrecognised_url:'bad_input',
@@ -749,15 +789,62 @@ for(const [id,side] of [['btnFileA','a'],['btnFileB','b']])
 document.getElementById('filePick').onchange=async e=>{
   const f=e.target.files[0]; if(!f)return;
   try{
-    const r=await KCDB.loadFile(f);
+    const r=await KCDB.loadFile(f); r.fname=f.name;
     PENDING[pickSide]=r;
     document.getElementById(pickSide==='a'?'inA':'inB').value=f.name;
-    say(T('file_ready',{n:f.name}));
+    detect(pickSide); say(T('file_ready',{n:f.name}));
   }catch(err){say(errText(err),true);}
   e.target.value='';
 };
-document.getElementById('inA').oninput=()=>{PENDING.a=null;};
-document.getElementById('inB').oninput=()=>{PENDING.b=null;};
+
+/* 輸入形態即時偵測 */
+function detect(side){
+  const inp=document.getElementById(side==='a'?'inA':'inB');
+  const det=document.getElementById(side==='a'?'detA':'detB');
+  const wrap=inp.parentNode;
+  wrap.classList.toggle('filled',!!inp.value);
+  if(PENDING[side]){det.textContent=T('det_file')+'\uff1a'+(PENDING[side].fname||'');
+    det.className='det file';return;}
+  const v=inp.value.trim();
+  if(!v){det.textContent='';det.className='det';return;}
+  const p=KCDB.parseInput(v);
+  if(p.kind==='id'){det.textContent=T('det_id')+'\uff1a'+p.id;det.className='det ok';}
+  else if(p.kind==='b64'){det.textContent=T('det_b64');det.className='det ok';}
+  else{det.textContent=T('det_bad');det.className='det bad';}
+}
+for(const side of ['a','b']){
+  const inp=document.getElementById(side==='a'?'inA':'inB');
+  inp.oninput=()=>{PENDING[side]=null;detect(side);};
+  inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();runCompare();}};
+  const wrap=inp.parentNode;
+  wrap.querySelector('.clr').onclick=()=>{inp.value='';PENDING[side]=null;detect(side);inp.focus();};
+  /* 拖放 .kcsim */
+  for(const ev of ['dragenter','dragover'])
+    wrap.addEventListener(ev,e=>{e.preventDefault();wrap.classList.add('drop');});
+  for(const ev of ['dragleave','dragend'])
+    wrap.addEventListener(ev,()=>wrap.classList.remove('drop'));
+  wrap.addEventListener('drop',async e=>{
+    e.preventDefault();wrap.classList.remove('drop');
+    const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];
+    if(!f)return;
+    try{const r=await KCDB.loadFile(f);r.fname=f.name;PENDING[side]=r;
+      inp.value=f.name;detect(side);say(T('file_ready',{n:f.name}));}
+    catch(err){say(errText(err),true);}
+  });
+}
+
+/* 字級 */
+let ZOOM=+(localStorage.getItem('kcdiff-zoom')||1);
+function applyZoom(){
+  ZOOM=Math.min(1.6,Math.max(0.8,Math.round(ZOOM*100)/100));
+  document.body.style.zoom=ZOOM;
+  document.getElementById('zoomVal').textContent=Math.round(ZOOM*100)+'%';
+  try{localStorage.setItem('kcdiff-zoom',ZOOM);}catch(e){}
+}
+document.getElementById('zoomIn').onclick=()=>{ZOOM+=0.1;applyZoom();};
+document.getElementById('zoomOut').onclick=()=>{ZOOM-=0.1;applyZoom();};
+document.getElementById('zoomVal').onclick=()=>{ZOOM=1;applyZoom();};
+applyZoom();
 
 KCDB.loadStrings().then(({en,ja})=>{
   UPSTREAM.en=en; UPSTREAM.ja=ja; root.lang=LANG;
@@ -765,8 +852,8 @@ KCDB.loadStrings().then(({en,ja})=>{
   if(q.get('a')&&q.get('b')){
     document.getElementById('inA').value='https://kc3kai.github.io/kancolle-replay/?s='+q.get('a');
     document.getElementById('inB').value='https://kc3kai.github.io/kancolle-replay/?s='+q.get('b');
-    runCompare();
-  }else{ updateShare(); say(T('idle')); render(); }
+    detect('a');detect('b');runCompare();
+  }else{ updateShare(); say(T('idle')); detect('a');detect('b'); render(); }
 });
 render();
 </script>

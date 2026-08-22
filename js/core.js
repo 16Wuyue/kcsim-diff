@@ -20,6 +20,7 @@ function build(A,B,N){
   /* ── 自軍艦隊：mstId+出現序 對齊，同位置增減併成換艦 ── */
   function pairFleet(fa,fb,key,label){
     if(!fa&&!fb)return null;
+    const hasA=!!fa, hasB=!!fb;          /* 某一側整支艦隊不存在時，不可拿另一側的陣形去比 */
     fa=fa||{ships:[]}; fb=fb||{ships:[]};
     const groups=[];
     for(const [tag,ka,kb] of [['main',fa.ships,fb.ships],['escort',fa.shipsEscort,fb.shipsEscort]]){
@@ -41,8 +42,10 @@ function build(A,B,N){
       if(rows.length)groups.push({tag,rows});
     }
     if(!groups.length)return null;
-    return {key,label,typeA:fa.type??null,typeB:fb.type??null,
-      formA:fa.formation??null,formB:fb.formation??null,groups};
+    return {key,label,hasA,hasB,
+      typeA:hasA?(fa.type??null):null, typeB:hasB?(fb.type??null):null,
+      formA:hasA?(fa.formation??null):null, formB:hasB?(fb.formation??null):null,
+      groups};
   }
 
   const fleets=[];
@@ -143,9 +146,13 @@ function build(A,B,N){
     if(typeof a==='object'||typeof b==='object')return JSON.stringify(a)===JSON.stringify(b);
     const na=+a,nb=+b;
     return (a!==''&&b!==''&&!isNaN(na)&&!isNaN(nb))?na===nb:a===b;};
+  const USEKEY={supportN:'useSupportN',supportB:'useSupportB'};
+  for(const f of fleets){
+    const k=USEKEY[f.key]||(f.key.indexOf('friend')===0?'useFF':null);
+    if(!k)continue;
+    f.useKey=k; f.useA=A[k]??null; f.useB=B[k]??null;
+  }
   const settings=[];
-  for(const k of ['useSupportN','useSupportB','useFF'])
-    if(!same(A[k],B[k]))settings.push({scope:'top',field:k,a:A[k],b:B[k]});
   for(const key of ['settings','settingsFCF','autoBonus']){
     const oa=A[key]||{}, ob=B[key]||{};
     for(const k of new Set([...Object.keys(oa),...Object.keys(ob)])){
