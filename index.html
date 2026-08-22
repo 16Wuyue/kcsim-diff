@@ -1,0 +1,773 @@
+<!doctype html>
+<html lang="zh-Hant">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="https://cdn.jsdelivr.net/npm/lzma@2.3.2/src/lzma_worker.min.js" integrity="sha384-i0BmxJgY8ewnjHQFgeqUwAtroLPzl8tRN6M8tMYoR8fZPzUogiI6Uo8bUbzxKa9t" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js" integrity="sha384-0d+Gr7vM4Drod8E3hXKgciWJSWbjD/opKLLygI9ktiWbuvlDwQLzU46wJ9s5gsp7" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/gh/KC3Kai/kancolle-replay@master/js/kcSHIPDATA.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/KC3Kai/kancolle-replay@master/js/kcEQDATA.js"></script>
+<script src="js/core.js"></script>
+<script src="js/browser.js"></script>
+<title>kcsim diff</title>
+<style>
+:root{--bg:#1f1f1f;--canvas:#181818;--panel:#252526;--field:#1c1c1c;--line:#3c3c3c;--line-soft:#2b2b2b;
+  --text:#cccccc;--muted:#a7a7a7;--quiet:#87909b;--blue:#0078d4;
+  --amber:#d29922;--amber-bg:rgba(210,153,34,.15);--amber-line:rgba(210,153,34,.62);
+  --prof-blue:#4a84b5;--prof-gold:#d49c0a;--head:#ffffff;
+  --warn:#d29922;--warn-bg:rgba(210,153,34,.08);--warn-line:rgba(210,153,34,.35);--warn-text:#c7bfae}
+:root[data-ui="light"]{--bg:#fff;--canvas:#f8f8f8;--panel:#f3f3f3;--field:#fff;--line:#d4d4d4;--line-soft:#e5e5e5;
+  --text:#3b3b3b;--muted:#5f6368;--quiet:#6e7681;--blue:#005fb8;
+  --amber:#9a6700;--amber-bg:rgba(154,103,0,.11);--amber-line:rgba(154,103,0,.55);
+  --prof-blue:#2f6690;--prof-gold:#8a6200;--head:#1b1b1b;
+  --warn:#9a6700;--warn-bg:#fff8e5;--warn-line:#e0c78a;--warn-text:#5c4a1f}
+*{box-sizing:border-box}
+html{color-scheme:dark} html[data-ui="light"]{color-scheme:light}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:14px/1.5 system-ui,"Segoe UI","Microsoft JhengHei UI","Hiragino Sans",sans-serif}
+button{font:inherit;color:inherit;cursor:pointer}
+.mono{font-family:Consolas,"JetBrains Mono",monospace;font-variant-numeric:tabular-nums}
+.app{max-width:1320px;margin:auto;padding:0 24px 72px}
+
+.top{height:62px;display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--line-soft)}
+.brand{font-size:16px;font-weight:700;letter-spacing:-.02em;color:var(--head)}
+.brand small{font-size:11px;color:var(--quiet);font-weight:500;margin-left:8px}
+.topact{margin-left:auto;display:flex;align-items:center;gap:8px}
+.linkbox{display:flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:4px;overflow:hidden;
+  background:var(--field)}
+.linkbox .u{padding:5px 10px;font-size:11.5px;color:var(--quiet);max-width:290px;overflow:hidden;
+  white-space:nowrap;text-overflow:ellipsis;font-family:Consolas,monospace}
+.linkbox button{border:0;border-left:1px solid var(--line);background:var(--panel);padding:6px 11px;font-size:12px;
+  color:var(--text);white-space:nowrap}
+.linkbox button:hover{background:var(--line-soft)}
+.linkbox.off .u{opacity:.55} .linkbox.off button{opacity:.5;cursor:not-allowed}
+.tb{border:1px solid var(--line);background:var(--panel);border-radius:4px;padding:5px 10px;font-size:12px}
+.tb:focus-visible,.linkbox button:focus-visible{outline:1px solid var(--blue);outline-offset:1px}
+
+.import{display:grid;grid-template-columns:1fr 30px 1fr auto;gap:10px;align-items:end;
+  padding:20px 0 18px;border-bottom:1px solid var(--line-soft)}
+.source label{display:block;color:var(--quiet);font-size:11px;font-weight:700;letter-spacing:.1em;margin:0 0 5px}
+.source label b{color:var(--text)}
+.url{height:38px;width:100%;outline:none;border:1px solid var(--line);background:var(--field);border-radius:4px;padding:9px 10px;
+  color:#aeb6c1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-family:Consolas,monospace;font-size:12px}
+:root[data-ui="light"] .url{color:#4a5157}
+.join{align-self:end;height:38px;display:flex;align-items:center;justify-content:center;
+  color:var(--quiet);font-size:18px}
+.run{height:38px;border:0;border-radius:4px;background:var(--blue);padding:0 16px;font-weight:600;color:#fff}
+.filebtns{grid-column:1/-1;display:flex;gap:8px;margin:2px 0 0}
+.hint{grid-column:1/-1;margin:-2px 0 0;color:var(--quiet);font-size:12px}
+
+.summary{display:flex;border-bottom:1px solid var(--line-soft)}
+.sum{background:none;border:0;border-bottom:2px solid transparent;text-align:left;
+  padding:16px 20px 14px 0;margin-right:22px;min-width:108px}
+.sum:hover{background:var(--panel)}
+.sum strong{display:block;color:var(--head);font:600 23px/1 Consolas,monospace}
+.sum span{display:block;margin-top:6px;color:var(--muted);font-size:12px}
+.sum.active{border-bottom-color:var(--amber)} .sum.active strong{color:var(--amber)}
+
+.toolbar{position:sticky;top:0;z-index:2;background:var(--bg);border-bottom:1px solid var(--line-soft);
+  padding:10px 0;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.section{font-size:12px;color:var(--muted);margin-right:5px}
+.filter,.toggle{border:1px solid var(--line);border-radius:4px;background:var(--panel);padding:6px 10px;font-size:13px}
+.filter.on{color:var(--amber);border-color:var(--amber-line);background:var(--amber-bg)}
+.spacer{flex:1}
+.switch{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:13px;border:0;background:none}
+.switch i{display:inline-block;width:27px;height:15px;border-radius:9px;background:var(--line);position:relative;
+  transition:background .15s}
+.switch i:after{content:"";width:11px;height:11px;border-radius:50%;background:#fff;position:absolute;
+  left:2px;top:2px;transition:left .15s}
+.switch[aria-pressed="true"] i{background:var(--blue)}
+.switch[aria-pressed="true"] i:after{left:14px}
+.lang{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.lang button{border:0;background:var(--panel);padding:6px 9px;font-size:12px;color:var(--quiet)}
+.lang button[aria-pressed="true"]{background:var(--blue);color:#fff}
+
+.section-title{display:flex;align-items:baseline;gap:10px;padding:26px 0 10px}
+.section-title h1{font-size:17px;margin:0;color:var(--head)}
+.scope-note{display:flex;align-items:flex-start;gap:9px;margin:0 0 14px;padding:9px 11px;
+  border:1px solid var(--warn-line);border-left:3px solid var(--warn);border-radius:3px;
+  background:var(--warn-bg);color:var(--warn-text);font-size:12px}
+.scope-note svg{flex:none;width:15px;height:15px;margin-top:1px;fill:var(--warn)}
+.scope-note b{color:var(--warn);white-space:nowrap}
+.scope-note span{line-height:1.55}
+/* ── 上游圖示 ── */
+/* 深色線稿圖（素質）：暗色下壓成白色剪影才看得見 */
+.ic{width:14px;height:14px;object-fit:contain;flex:none;vertical-align:-2px;
+  filter:brightness(0) invert(1) opacity(.75)}
+.stat.changed .ic{filter:brightness(0) invert(1) opacity(1)}
+html[data-ui="light"] .ic{filter:none;opacity:.75}
+html[data-ui="light"] .stat.changed .ic{opacity:1}
+/* 本身就是彩色的圖（燃料・彈藥・裝備・節點）：只補亮度，不可反相 */
+.ic.ic-color,.ic-eq{filter:brightness(1.18) contrast(1.05)}
+.stat.changed .ic.ic-color{filter:brightness(1.3) contrast(1.05)}
+html[data-ui="light"] .ic.ic-color,html[data-ui="light"] .ic-eq{filter:none}
+.ic-eq{width:17px;height:17px;object-fit:contain;justify-self:center}
+.ic-prof{height:17px;width:auto;object-fit:contain;justify-self:center}
+.ic-form{height:20px;width:auto;object-fit:contain;vertical-align:middle;border-radius:2px}
+.ic-node{height:18px;width:auto;max-width:38px;object-fit:contain;flex:none;vertical-align:-4px;
+  filter:brightness(1.25) contrast(1.05)}
+html[data-ui="light"] .ic-node{filter:none}
+.banner{width:100%;max-width:160px;height:auto;border-radius:2px;display:block;margin:0 0 6px}
+.formbox{display:inline-flex;align-items:center;gap:6px;margin-left:8px}
+.formbox .arrow{color:var(--quiet);font-size:11px;margin:0 4px}
+.formbox{font-size:11.5px;color:var(--muted);font-weight:400;letter-spacing:0}
+.formbox.changed{padding:1px 5px;border:1px solid var(--amber-line);border-radius:3px;background:var(--amber-bg)}
+.group{border-top:1px solid var(--line);padding-top:13px;margin-top:16px}
+.group-title{font-size:12px;font-weight:700;letter-spacing:.09em;color:var(--muted);margin:0 0 8px}
+.group-title span{font-weight:400;letter-spacing:0;color:var(--quiet)}
+.group-title.empty{opacity:.6;margin-bottom:0}
+.fleet-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px}
+.ship-tile{min-width:0;text-align:left;padding:10px;border:1px solid var(--line);border-radius:4px;
+  background:var(--canvas);display:flex;flex-direction:column;gap:6px;transition:border-color .15s,background .15s}
+.ship-tile:hover{border-color:var(--muted)}
+.ship-tile.selected{border-color:var(--amber-line);background:var(--amber-bg)}
+.ship-tile.quiet{opacity:.5}
+.tile-meta{display:flex;align-items:center;gap:6px}
+.tile-pos{font:11px/1 Consolas,monospace;color:var(--quiet)}
+.status-chip{font-size:10px;padding:1px 5px;border-radius:2px;border:1px solid var(--amber-line);color:var(--amber)}
+.tile-name{font-size:13px;font-weight:600;color:var(--text);overflow-wrap:anywhere}
+.swap-names{display:flex;flex-direction:column;gap:2px;font-size:12px}
+.swap-names em{font-style:normal;color:var(--quiet);margin-right:5px;font-size:10px}
+.swap-names .to{color:var(--amber)}
+.tile-pair{font:11.5px/1 Consolas,monospace;color:var(--quiet)}
+.tile-pair b{color:var(--amber)}
+.tile-foot{display:flex;justify-content:space-between;font-size:11px;color:var(--quiet);margin-top:auto}
+.tile-foot strong{color:var(--text);font-weight:600}
+.expanded-label{font-size:11px;letter-spacing:.08em;color:var(--quiet);margin:14px 0 6px}
+
+.comparison{border:1px solid var(--line);border-radius:5px;background:var(--canvas);overflow:hidden}
+.comparison.changed{border-color:var(--amber-line)}
+.compare-head{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--panel);
+  border-bottom:1px solid var(--line)}
+.compare-head .position{font-size:11.5px;color:var(--quiet)}
+.compare-head .ship{font-size:14px;font-weight:600;color:var(--head)}
+.compare-head .badge{font-size:10.5px;padding:1px 6px;border-radius:2px;border:1px solid var(--amber-line);color:var(--amber)}
+.compare-head .diff-count{margin-left:auto;font:11.5px/1 Consolas,monospace;color:var(--amber)}
+.columns{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px}
+.card{border:1px solid var(--line-soft);border-radius:4px;background:var(--bg);padding:9px;min-width:0}
+.side{font-size:10px;letter-spacing:.12em;color:var(--quiet);margin:0 0 7px}
+.shipname{border:1px solid var(--line);border-radius:3px;background:var(--field);padding:5px 8px;
+  font-size:13px;font-weight:600;margin:0 0 7px;overflow-wrap:anywhere}
+.shipname.changed{background:var(--amber-bg);border-color:var(--amber-line);color:var(--amber)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:3px}
+.stat{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:3px;
+  background:var(--field);padding:3px 7px;font-size:11.5px;color:var(--quiet);min-width:0}
+.stat b{margin-left:auto;font:12px/1.4 Consolas,monospace;color:var(--text);font-weight:500}
+.stat.changed{background:var(--amber-bg);border-color:var(--amber-line)}
+.stat.changed b{color:var(--amber);font-weight:700}
+.equips{margin-top:7px;display:flex;flex-direction:column;gap:3px}
+.equip{display:grid;grid-template-columns:13px 18px minmax(0,1fr) 30px 18px;
+  align-items:center;gap:7px;border:1px solid var(--line);border-radius:3px;
+  background:var(--field);padding:3px 7px;font-size:11.5px;min-width:0}
+.equip.lb{grid-template-columns:13px 18px minmax(0,1fr) 30px 18px 26px}
+.equip .cell{min-width:0}
+.equip .imp{text-align:right}
+.equip .carry{font:10.5px/1 Consolas,monospace;color:var(--quiet);text-align:right}
+.equip.changed .carry{color:var(--amber)}
+.equip.changed{background:var(--amber-bg);border-color:var(--amber-line)}
+.equip.changed .equip-name{color:var(--amber);font-weight:600}
+.equip .slots{font:10px/1 Consolas,monospace;color:var(--quiet)}
+.equip .equip-name{overflow-wrap:anywhere;min-width:0}
+.equip .imp{font:10.5px/1 Consolas,monospace;color:var(--quiet)}
+.equip.changed .imp{color:var(--amber)}
+.equip .none{color:var(--quiet);font-style:italic}
+.prof{font:12px/1 Consolas,monospace;letter-spacing:1px;text-align:center}
+.prof.low{color:var(--prof-blue)} .prof.high{color:var(--prof-gold)}
+/* 熟練度金色與琥珀標示同色系：只有在「該格已被標示」且「熟練度是金色」時，
+   沿字形描邊把符號從底色上分離出來 */
+.equip.changed .prof.high{
+  paint-order:stroke fill;
+  -webkit-text-stroke:3px var(--bg);
+  text-shadow:0 0 1px var(--bg),0 0 2px var(--bg);
+}
+
+.lbgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:8px;
+  align-items:start;margin-top:6px}
+.lbgrid .group{border-top:0;padding-top:0;margin-top:0}
+.lbgrid .columns{grid-template-columns:1fr;gap:8px}
+.lbgrid .comparison{height:100%}
+.lbhead{font-size:12px;font-weight:700;letter-spacing:.09em;color:var(--muted);margin:16px 0 0}
+.enemy-panel,.settings-panel{border:1px solid var(--line);border-radius:5px;background:var(--canvas);overflow:hidden}
+.enemy-panel+.enemy-panel{margin-top:8px}
+.enemy-head,.settings-head{display:flex;align-items:baseline;gap:10px;padding:8px 12px;background:var(--panel);
+  border-bottom:1px solid var(--line);font-size:12.5px}
+.enemy-head b,.settings-head{color:var(--head)}
+.enemy-head span{color:var(--quiet);font-size:11.5px}
+.enemy-count{margin-left:auto;color:var(--amber);font-family:Consolas,monospace}
+.enemy-comp{padding:8px 12px;border-top:1px solid var(--line-soft)}
+.enemy-comp:first-child{border-top:0}
+.comp-label{font:11px/1 Consolas,monospace;color:var(--quiet);margin:0 0 5px}
+.plain-diff,.setting-row{display:grid;grid-template-columns:minmax(120px,1.2fr) 1fr 1fr;gap:10px;
+  font-size:12.5px;padding:2px 0}
+.setting-row{padding:5px 12px;border-top:1px solid var(--line-soft)}
+.plain-diff .label,.setting-row .label{color:var(--muted)}
+.plain-diff .new,.setting-row .new{color:var(--amber);font-weight:600}
+.enemy-ships{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+.enemy-fleet{border:1px solid var(--line);border-radius:3px;background:var(--field);padding:6px 8px;font-size:12px}
+.enemy-fleet.b{border-color:var(--amber-line);background:var(--amber-bg);color:var(--amber)}
+.enemy-fleet small{display:block;color:var(--quiet);font-size:10.5px;margin-top:3px}
+.enemy-fleet.b small{color:var(--quiet)}
+.ecomp{padding:9px 12px;border-top:1px solid var(--line-soft)}
+.ecomp-hd{display:flex;align-items:baseline;gap:10px;margin:0 0 6px}
+.ecomp-hd b{font:11.5px/1 Consolas,monospace;color:var(--quiet);font-weight:400}
+.erate{margin-left:auto;font:11.5px/1 Consolas,monospace;color:var(--muted)}
+.erate .new{color:var(--amber);font-weight:600}
+.eship{display:flex;align-items:center;gap:9px;padding:3px 0;font-size:12.5px}
+.eship img{height:22px;width:auto;max-width:112px;object-fit:cover;border-radius:2px;flex:none}
+.eship .en{color:var(--text);flex:none}
+.eship .ch{margin-left:auto;display:flex;gap:14px;flex-wrap:wrap;justify-content:flex-end}
+.eship .ch span{font:11.5px/1.4 Consolas,monospace;color:var(--muted)}
+.eship .ch b{color:var(--amber);font-weight:600}
+.eship .ch i{font-style:normal;color:var(--quiet);margin-right:5px}
+.eship.add .en{color:var(--amber)}
+.eship.rm .en{color:var(--quiet)}
+.eship .mark{font:13px/1 Consolas,monospace;font-weight:700;width:12px;flex:none}
+.eship.add .mark{color:var(--amber)}
+.eship.rm .mark{color:var(--quiet)}
+.esame{font-size:11.5px;color:var(--quiet);padding:4px 0 0}
+.eflag{display:grid;grid-template-columns:minmax(120px,1fr) auto auto;gap:12px;font-size:12.5px;padding:3px 12px}
+.eflag .new{color:var(--amber);font-weight:600}
+@media (max-width:1100px){.fleet-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:760px){
+  .import{grid-template-columns:1fr}.join{display:none}
+  .fleet-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .columns{grid-template-columns:1fr}
+  .plain-diff,.setting-row{grid-template-columns:1fr}
+  .linkbox .u{max-width:130px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<body><main class="app">
+<header class="top">
+  <div class="brand">kcsim diff <small>出撃シミュレータ設定比對</small></div>
+  <div class="topact">
+    <span class="linkbox" id="linkbox"><span class="u mono" id="shareUrl"></span>
+      <button type="button" id="copyLink">複製</button></span>
+    <div class="lang" id="lang"></div>
+    <button class="tb" type="button" id="theme">深色</button>
+  </div>
+</header>
+
+<section class="import">
+  <div class="source"><label><b>A</b> · <span data-t="base">基準設定</span></label>
+    <input class="url" id="inA" spellcheck="false" placeholder="?s=... / #backup=... "></div>
+  <div class="join">⇄</div>
+  <div class="source"><label><b>B</b> · <span data-t="cmp">對照設定</span></label>
+    <input class="url" id="inB" spellcheck="false" placeholder="?s=... / #backup=... "></div>
+  <button class="run" type="button" id="btnRun" data-t="run">比對設定</button>
+  <div class="filebtns"><button class="act" type="button" id="btnFileA">A ← .kcsim</button><button class="act" type="button" id="btnFileB">B ← .kcsim</button><input type="file" id="filePick" accept=".kcsim,application/json" style="display:none"></div><p class="hint" data-t="hint">支援共享連結、完整備份連結或 .kcsim 檔案。資料只在瀏覽器中處理。</p>
+</section>
+
+<nav class="summary" id="summary"></nav>
+
+<div class="toolbar">
+  <span class="section" data-t="show">顯示</span>
+  <span id="filters"></span>
+  <span class="spacer"></span>
+  <button class="toggle" type="button" id="profMode">熟練度：符號</button>
+  <button class="toggle" type="button" id="swapAB">A ⇄ B</button>
+  <button class="switch" type="button" id="onlyDiff" aria-pressed="true"><span data-t="onlydiff">隱藏無差異艦</span> <i></i></button>
+</div>
+
+<div id="status" class="status"></div>
+<div id="body"></div>
+</main>
+<script>
+let CARDS={fleets:[],landBases:[],battles:[],settings:[]};
+let SHARE={a:null,b:null}, READY=false;
+const $=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e;};
+const root=document.documentElement;
+const ASSET=KCDB.UP+'assets/';
+const STATIC={level:'lv',hp:'hp',hpInit:'hp',fp:'fp',tp:'tp',aa:'aa',ar:'ar',ev:'ev',
+  asw:'asw',los:'los',luk:'lk',range:'rn',tacc:'acc',fuel:'fuel',ammo:'ammo'};
+const SAFEPATH=/^[A-Za-z0-9_\-]+\/[A-Za-z0-9_\-.]+$/;
+function icon(file,cls,title){
+  if(!SAFEPATH.test(file)||file.indexOf('..')>=0){const d=document.createElement('span');
+    d.className=cls||''; return d;}
+  const i=document.createElement('img');
+  i.src=ASSET+file; i.className=cls; i.alt=''; i.loading='lazy';
+  if(title)i.title=title;
+  i.onerror=()=>i.remove();
+  return i;
+}
+const COLORIC=new Set(['fuel','ammo']);
+function statIcon(k){const f=STATIC[k];
+  return f?icon('stats/'+f+'.png','ic'+(COLORIC.has(k)?' ic-color':''),T(k)):null;}
+function formIcon(n){
+  if(n==null)return null;
+  const f=n>=11?('stats/form'+n+'.png'):('stats/form'+n+'.jpg');
+  return icon(f,'ic-form',T('f'+n));
+}
+function warnSvg(){
+  const ns='http://www.w3.org/2000/svg';
+  const svg=document.createElementNS(ns,'svg');
+  svg.setAttribute('viewBox','0 0 16 16'); svg.setAttribute('aria-hidden','true');
+  const p=document.createElementNS(ns,'path');
+  p.setAttribute('d','M8 1.2c.36 0 .7.2.87.52l6.02 11.5c.34.66-.13 1.48-.87 1.48H1.98c-.74 0-1.21-.82-.87-1.48L7.13 1.72A.98.98 0 0 1 8 1.2Zm-.75 4.3v4.2h1.5V5.5h-1.5Zm0 5.4v1.6h1.5v-1.6h-1.5Z');
+  svg.appendChild(p);
+  return svg;
+}
+
+/* ───── i18n：優先取上游 strings，缺的才用自己的 ───── */
+const UPSTREAM={en:null,ja:null};
+/* 只有上游沒有的詞才寫在這裡 */
+const OWN={
+  'zh-Hant':{base:'基準設定',cmp:'對照設定',run:'比對設定',show:'顯示',onlydiff:'隱藏無差異艦',
+    hint:'支援共享連結、完整備份連結或 .kcsim 檔案。資料只在瀏覽器中處理。',
+    sec_fleet:'編成與裝備',sec_enemy:'敵方設定',sec_setting:'模擬器設定',all:'全部差異',
+    scope:'比較範圍',node:'戰鬥點',copy:'複製',copied:'已複製',nolink:'匯入檔案或長連結時無法產生比對連結',
+    a_side:'A · 基準',b_side:'B · 對照',diffs:'{n} 處差異',ships_row:'點選艦娘展開完整對照',
+    swap:'換艦',pos:'位置 {a} → {b}',main:'主力',escort:'護衛',fleet_main:'本隊',fleet_supportN:'道中支援',fleet_supportB:'決戰支援',prof_img:'熟練度：圖示',nodiff:'無差異（{n} 項已比對）',idle:'貼入兩條共享連結，或匯入 .kcsim 檔案，再按「比對設定」。',loading:'載入中…',bad_input:'無法辨識的輸入：需要 ?s= 短連結、#backup= 長連結，或 .kcsim 檔案。',kcrdb_fail:'向 kcrdb 取資料失敗，請確認連結是否正確。',load_fail:'解碼失敗。',bad_file:'檔案不是有效的 .kcsim 備份。',file_ready:'已讀取 {n}，按「比對設定」繼續。',yes:'是',no:'否',sg_top:'總開關',sg_settings:'模擬器設定',sg_settingsFCF:'FCF 設定',sg_autoBonus:'自動加成',set_useSupportN:'使用道中支援',set_useSupportB:'使用決戰支援',set_useFF:'使用友軍艦隊',set_useDebuff:'套用減益',comp:'敵編成',rate:'出現權重',same_ships:'其餘 {n} 艘相同',only_side:'只存在於 {s}',bf_formation:'陣形',bf_nodeType:'戰鬥型態',bf_doNB:'夜戰',bf_doNBCond:'夜戰條件',bf_lbasWaves:'基地空襭波次',bf_subOnly:'僅潛水艦',bf_useNormalSupport:'一般支援',bf_useBalloon:'阻塞氣球',bf_useAtoll:'環礁',bf_useSmoke:'煙幕',bf_useAnchorageRepair:'泊地修理',bf_offrouteRate:'偏離航路率',bf_forceEngagement:'強制交戰型態',slots:'搭載數',equip1:'裝備1',equip2:'裝備2',equip3:'裝備3',equip4:'裝備4',equip5:'裝備5',theme_d:'深色',theme_l:'淺色',
+    prof_sym:'熟練度：符號',prof_num:'熟練度：數字',
+    f1:'單縱陣',f2:'複縱陣',f3:'輪形陣',f4:'梯形陣',f5:'單橫陣',f6:'警戒陣',
+    f11:'第一警戒航行序列',f12:'第二警戒航行序列',f13:'第三警戒航行序列',f14:'第四警戒航行序列'},
+  ja:{base:'基準設定',cmp:'比較設定',run:'比較する',show:'表示',onlydiff:'差分のない艦を隠す',
+    hint:'共有リンク・バックアップリンク・.kcsim ファイルに対応。データはブラウザ内でのみ処理されます。',
+    sec_fleet:'編成と装備',sec_enemy:'敵設定',sec_setting:'シミュレータ設定',all:'すべての差分',
+    scope:'比較範囲',copy:'コピー',copied:'コピー済み',nolink:'ファイル読込・長いリンクでは比較リンクを生成できません',
+    a_side:'A · 基準',b_side:'B · 比較',diffs:'{n} 件',ships_row:'艦をクリックすると詳細比較',
+    swap:'艦変更',pos:'位置 {a} → {b}',main:'主力',escort:'護衛',fleet_main:'本隊',fleet_supportN:'道中支援',fleet_supportB:'決戰支援',prof_img:'熟練度：圖示',nodiff:'無差異（{n} 項已比對）',comp:'敵編成',rate:'出現權重',same_ships:'其餘 {n} 艘相同',only_side:'只存在於 {s}',bf_formation:'陣形',bf_nodeType:'戰鬥型態',bf_doNB:'夜戰',bf_doNBCond:'夜戰條件',bf_lbasWaves:'基地空襭波次',bf_subOnly:'僅潛水艦',bf_useNormalSupport:'一般支援',bf_useBalloon:'阻塞氣球',bf_useAtoll:'環礁',bf_useSmoke:'煙幕',bf_useAnchorageRepair:'泊地修理',bf_offrouteRate:'偏離航路率',bf_forceEngagement:'強制交戰型態',slots:'搭載數',equip1:'裝備1',equip2:'裝備2',equip3:'裝備3',equip4:'裝備4',equip5:'裝備5',theme_d:'ダーク',theme_l:'ライト',
+    prof_sym:'熟練度：記号',prof_num:'熟練度：数値',
+    f1:'単縦陣',f2:'複縦陣',f3:'輪形陣',f4:'梯形陣',f5:'単横陣',f6:'警戒陣',
+    f11:'第一警戒航行序列',f12:'第二警戒航行序列',f13:'第三警戒航行序列',f14:'第四警戒航行序列'},
+  en:{base:'Base',cmp:'Compare',run:'Compare',show:'Show',onlydiff:'Hide unchanged ships',
+    hint:'Accepts share links, full backup links, or .kcsim files. Everything is processed in your browser.',
+    sec_fleet:'Fleet & Equipment',sec_enemy:'Enemy Setup',sec_setting:'Simulator Settings',all:'All differences',
+    scope:'Scope',copy:'Copy',copied:'Copied',nolink:'No compare link for imported files or long links',
+    a_side:'A · Base',b_side:'B · Compare',diffs:'{n} changes',ships_row:'Click a ship for the full comparison',
+    swap:'Ship swap',pos:'Slot {a} → {b}',main:'Main',escort:'Escort',fleet_main:'Main Fleet',fleet_supportN:'Support (Normal)',fleet_supportB:'Support (Boss)',prof_img:'Proficiency: icons',nodiff:'No differences ({n} compared)',idle:'Paste two share links, or import .kcsim files, then press Compare.',loading:'Loading…',bad_input:'Unrecognised input. Accepts ?s= links, #backup= links, or .kcsim files.',kcrdb_fail:'Could not fetch from kcrdb. Check the link.',load_fail:'Failed to decode.',bad_file:'Not a valid .kcsim backup.',file_ready:'Loaded {n}. Press Compare to continue.',yes:'Yes',no:'No',sg_top:'Global switches',sg_settings:'Simulator settings',sg_settingsFCF:'FCF settings',sg_autoBonus:'Auto bonus',set_useSupportN:'Use support (normal)',set_useSupportB:'Use support (boss)',set_useFF:'Use friend fleet',set_useDebuff:'Apply debuff',comp:'Enemy comp',rate:'Spawn weight',same_ships:'{n} other ships identical',only_side:'Only in {s}',bf_formation:'Formation',bf_nodeType:'Battle type',bf_doNB:'Night battle',bf_doNBCond:'Night battle cond.',bf_lbasWaves:'LBAS waves',bf_subOnly:'Subs only',bf_useNormalSupport:'Support',bf_useBalloon:'Barrage balloon',bf_useAtoll:'Atoll',bf_useSmoke:'Smoke',bf_useAnchorageRepair:'Anchorage repair',bf_offrouteRate:'Off-route rate',bf_forceEngagement:'Forced engagement',slots:'Slot size',equip1:'Equip 1',equip2:'Equip 2',equip3:'Equip 3',equip4:'Equip 4',equip5:'Equip 5',theme_d:'Dark',theme_l:'Light',
+    prof_sym:'Proficiency: symbols',prof_num:'Proficiency: numbers',
+    f1:'Line Ahead',f2:'Double Line',f3:'Diamond',f4:'Echelon',f5:'Line Abreast',f6:'Vanguard',
+    f11:'Cruising 1',f12:'Cruising 2',f13:'Cruising 3',f14:'Cruising 4'}
+};
+/* 我們的欄位 → 上游 strings 的鍵 */
+const UPKEY={level:'stat_level',hp:'stat_HP',fp:'stat_Firepower',tp:'stat_Torpedo',aa:'stat_Anti-Air',
+  ar:'stat_Armour',ev:'stat_Evasion',asw:'stat_Anti-Submarine',los:'stat_Line of Sight',luk:'stat_luck',
+  range:'stat_range',tacc:'stat_torpedo_accuracy',morale:'morale',fuel:'fuel',ammo:'ammo',
+  hpInit:'stat_HP',slots:'slot_size',prof:'proficiency',imp:'improvement',
+  supportN:'support_fleet_normal',supportB:'support_fleet_boss',lbas:'land_base_aerial_support',
+  ftype1:'carrier_task_force',ftype2:'surface_task_force',ftype3:'transport_combined_fleet',
+  node:'node',autoscale:'autoscale_stats',preserve:'preserve_bonus_on_change',
+  bt1:'battle_normal',bt2:'battle_night_only',bt4:'battle_air_only',bt6:'battle_air_raid'};
+const NODEIMG={1:'nodeR',2:'nodeN',4:'nodeAir',6:'nodeRaid'};
+/* 上游字串裡的 {img_xx} 佔位符 → 對應的 stat 名稱鍵 */
+const IMGKEY={hp:'stat_HP',ev:'stat_Evasion',asw:'stat_Anti-Submarine',los:'stat_Line of Sight',
+  lv:'stat_level',fp:'stat_Firepower',tp:'stat_Torpedo',aa:'stat_Anti-Air',ar:'stat_Armour',
+  luck:'stat_luck',range:'stat_range'};
+let LANG=localStorage.getItem('kcdiff-lang')||'zh-Hant';
+function T(k,vars){
+  const up=UPKEY[k];
+  let s=null;
+  if(LANG==='zh-Hant'&&OWN['zh-Hant'][k]!=null)s=OWN['zh-Hant'][k];
+  if(s==null&&up){
+    const dict=UPSTREAM[LANG==='en'?'en':'ja'];           // 中文介面沿用日文漢字
+    if(dict&&dict[up]!=null&&dict[up]!=='')s=dict[up];
+  }
+  if(s==null)s=(OWN[LANG]&&OWN[LANG][k])??(OWN['zh-Hant'][k])??(/^(set_|sg_|bf_)/.test(k)?k.replace(/^(set_|sg_|bf_)/,''):k);
+  s=String(s).replace(/\{img_(\w+)\}/g,(m,tok)=>{
+    const key=IMGKEY[tok]; if(!key)return '';
+    const dict=UPSTREAM[LANG==='en'?'en':'ja'];
+    return (dict&&dict[key])||tok;
+  });
+  s=s.replace(/\{(\w+)\}/g,(m,p)=>vars&&vars[p]!=null?vars[p]:m);
+  return s.replace(/\s+/g,' ').trim();
+}
+function langLabel(k){return T(k);}
+
+/* ───── 熟練度 ───── */
+const PROF_SYM=['','|','||','|||','\\','\\\\','\\\\\\','>>'];
+let PROFMODE=localStorage.getItem('kcdiff-prof')||'img';
+function profNode(rank){
+  if(!rank)return null;
+  if(PROFMODE==='img')return icon('stats/prof'+rank+'.png','ic-prof',T('prof')+' '+rank);
+  const e=$('span','prof '+(rank>=4?'high':'low'),PROFMODE==='sym'?PROF_SYM[rank]:String(rank));
+  e.title=T('prof')+' '+rank;
+  return e;
+}
+
+/* ───── 狀態 ───── */
+let SWAP=false, ONLY=true, SEC='fleet', SEL={};
+const L=r=>SWAP?r.b:r.a, R=r=>SWAP?r.a:r.b;
+const STATK=['level','hp','fp','tp','aa','ar','ev','asw','los','luk','range','tacc'];
+const SUBK=['hpInit','morale','fuel','ammo'];
+const gv=(s,k)=>s?(k in s?s[k]:(s.stats?s.stats[k]:undefined)):undefined;
+const eqSame=(x,y)=>(!x&&!y)||(!!x&&!!y&&x.name===y.name&&x.lv===y.lv&&x.rank===y.rank);
+function countDiff(a,b){let n=0;
+  for(const k of STATK.concat(SUBK))if(String(gv(a,k)??'')!==String(gv(b,k)??''))n++;
+  const l=Math.max(a?a.equips.length:0,b?b.equips.length:0);
+  for(let i=0;i<l;i++)if(!eqSame(a?a.equips[i]:null,b?b.equips[i]:null))n++;
+  if(a&&b&&a.name!==b.name)n++;
+  return n;}
+
+/* ───── 摘要與篩選 ───── */
+function fleetCount(){
+  let n=0;
+  for(const fl of CARDS.fleets)for(const g of fl.groups)for(const r of g.rows)n+=countDiff(r.a,r.b);
+  for(const lb of CARDS.landBases){
+    const m=Math.max(lb.a.equips.length,lb.b.equips.length);
+    for(let i=0;i<m;i++)if(!eqSame(lb.a.equips[i],lb.b.equips[i]))n++;
+    if(String(lb.a.slots)!==String(lb.b.slots))n++;
+  }
+  return n;
+}
+function sections(){return [
+  {id:'fleet',k:'sec_fleet',n:fleetCount()},
+  {id:'enemy',k:'sec_enemy',n:(CARDS.battles||[]).reduce((t,b)=>t+b.flags.length+b.comps.length,0)},
+  {id:'setting',k:'sec_setting',n:(CARDS.settings||[]).length}];}
+/* ───── 卡片 ───── */
+function statCell(k,s,other,isB){
+  const v=gv(s,k), o=gv(other,k);
+  const diff=String(v??'')!==String(o??'');
+  const d=$('div','stat'+(isB&&diff?' changed':''));
+  const ic=statIcon(k); if(ic)d.append(ic);
+  d.append(document.createTextNode(T(k)),$('b',null,v==null||v===''?'—':String(v)));
+  return d;
+}
+function card(s,other,sideKey,isB){
+  const c=$('div','card');
+  c.append($('div','side',T(sideKey)));
+  const nmDiff=isB&&other&&s&&s.name!==other.name;
+  if(s&&s.img)c.append(icon('icons/'+s.img,'banner',s.name));
+  c.append($('div','shipname'+(nmDiff?' changed':''),s?s.name:'—'));
+  const g=$('div','stats');
+  for(const k of STATK)g.append(statCell(k,s,other,isB));
+  c.append(g);
+  const g2=$('div','stats');g2.style.marginTop='3px';
+  for(const k of SUBK)g2.append(statCell(k,s,other,isB));
+  c.append(g2);
+  const eqs=$('div','equips'), n=Math.max(s?s.equips.length:0,other?other.equips.length:0);
+  for(let i=0;i<n;i++){
+    const e=s?s.equips[i]:null, o=other?other.equips[i]:null;
+    if(!e&&!o)continue;
+    const diff=!eqSame(e,o);
+    const row=$('div','equip'+(isB&&diff?' changed':''));
+    row.append($('span','slots',String(i+1)));
+    row.append(e&&e.img?icon('items/'+e.img+'.png','ic-eq',e.name):$('span'));
+    row.append(e?$('span','equip-name',e.name):$('span','equip-name none','—'));
+    row.append(e&&e.lv?$('span','imp','★'+e.lv):$('span'));
+    row.append((e&&profNode(e.rank))||$('span'));
+    eqs.append(row);
+  }
+  c.append(eqs);
+  return c;
+}
+function comparison(row,tag){
+  const a=L(row), b=R(row), n=countDiff(a,b);
+  const art=$('article','comparison'+(n?' changed':''));
+  const hd=$('div','compare-head');
+  const sa=SWAP?row.slotB:row.slot, sb=SWAP?row.slot:row.slotB;
+  hd.append($('span','position mono',T(tag)+' #'+((sa??0)+1)));
+  hd.append($('span','ship',(a?a.name:'—')+(a&&b&&a.mstId!==b.mstId?' → '+b.name:'')));
+  if(a&&b&&a.mstId!==b.mstId)hd.append($('span','badge',T('swap')));
+  if(sb!=null&&sb!==sa)hd.append($('span','badge',T('pos',{a:sa+1,b:sb+1})));
+  hd.append($('span','diff-count',T('diffs',{n})));
+  const cols=$('div','columns');
+  cols.append(card(a,b,'a_side',false),card(b,a,'b_side',true));
+  art.append(hd,cols);
+  return art;
+}
+function tile(row,tag,gid,idx){
+  const a=L(row), b=R(row), n=countDiff(a,b);
+  const t=$('button','ship-tile'+(SEL[gid]===idx?' selected':'')+(n?'':' quiet'));
+  t.type='button';
+  const sa=SWAP?row.slotB:row.slot, sb=SWAP?row.slot:row.slotB;
+  const meta=$('span','tile-meta'); meta.append($('span','tile-pos','#'+((sa??0)+1)));
+  const ren=a&&b&&a.mstId!==b.mstId;
+  if(ren)meta.append($('span','status-chip',T('swap')));
+  if(sb!=null&&sb!==sa)meta.append($('span','status-chip',T('pos',{a:sa+1,b:sb+1})));
+  t.append(meta);
+  if(ren){const sw=$('span','swap-names');
+    const l=$('span'); l.append($('em',null,'A'),document.createTextNode(a.name));
+    const r=$('span','to'); r.append($('em',null,'B'),document.createTextNode(b.name));
+    sw.append(l,r); t.append(sw);}
+  else t.append($('span','tile-name',(a||b).name));
+  if(a&&b&&a.level!==b.level){const p=$('span','tile-pair');
+    p.append(document.createTextNode(T('level')+' '+a.level+' '),$('b',null,'→ '+b.level));t.append(p);}
+  const foot=$('span','tile-foot'); foot.append($('span',null,''),$('strong',null,T('diffs',{n})));
+  t.append(foot);
+  t.onclick=()=>{SEL[gid]=idx;render();};
+  return t;
+}
+
+/* ───── 各區 ───── */
+function renderFleet(host){
+  const st=$('section','section-title'); st.append($('h1',null,T('sec_fleet'))); host.append(st);
+  const note=$('div','scope-note');
+  note.append(warnSvg(),$('b',null,T('scope')),
+    $('span',null,`「${T('autoscale')}」・「${T('preserve')}」`+
+      (LANG==='en'?' are editor-side helpers that are never written to the save file, so they cannot be compared directly. The stat differences they produce are still shown.'
+       :LANG==='ja'?' はセーブに保存されない編集補助設定のため直接比較できません。それによる数値差分は通常どおり表示されます。'
+       :' 是未寫入存檔的編輯輔助設定，無法直接比對；它們造成的最終數值差異仍會正常顯示。')));
+  host.append(note);
+  let gi=0;
+  for(const fl of CARDS.fleets)for(const g of fl.groups){
+    const gid=fl.key+'-'+g.tag;
+    const all=g.rows, rows=g.rows.filter(r=>!ONLY||countDiff(L(r),R(r))>0);
+    const sec=$('section','group');
+    if(!rows.length){
+      const t=$('div','group-title empty');
+      t.append(document.createTextNode(T('fleet_'+fl.key)+' · '+T(g.tag)+'　'));
+      t.append($('span',null,T('nodiff',{n:all.length})));
+      sec.append(t); host.append(sec); continue;
+    }
+    const title=$('div','group-title');
+    title.append(document.createTextNode(T('fleet_'+fl.key)+' · '+T(g.tag)+'　'));
+    if(fl.formA!=null&&g.tag==='main'){
+      const fa=SWAP?fl.formB:fl.formA, fv=SWAP?fl.formA:fl.formB;
+      const fb=$('span','formbox'+(fa!==fv?' changed':''));
+      fb.append($('span',null,T('f'+fa)));
+      if(fa!==fv){fb.append($('span','arrow','→'),$('span',null,T('f'+fv)));}
+      title.append(fb);
+    }
+    title.append($('span',null,'　'+T('ships_row'))); sec.append(title);
+    const grid=$('div','fleet-grid');
+    if(SEL[gid]==null||SEL[gid]>=rows.length)SEL[gid]=0;
+    rows.forEach((r,i)=>grid.append(tile(r,g.tag,gid,i)));
+    sec.append(grid);
+    sec.append(comparison(rows[SEL[gid]],g.tag));
+    host.append(sec);
+    gi++;
+  }
+  /* 基地航空隊：一列三隊 */
+  if(CARDS.landBases&&CARDS.landBases.length)host.append($('div','lbhead',T('lbas')));
+  const lbg=$('div','lbgrid'); host.append(lbg);
+  for(const lb of CARDS.landBases){
+    const a=SWAP?lb.b:lb.a, b=SWAP?lb.a:lb.b;
+    const n=(()=>{let c=0;const m=Math.max(a.equips.length,b.equips.length);
+      for(let i=0;i<m;i++)if(!eqSame(a.equips[i],b.equips[i]))c++;
+      if(String(a.slots)!==String(b.slots))c++;return c;})();
+    const sec=$('section','group');
+    if(ONLY&&!n){
+      const t=$('div','group-title empty');
+      t.append(document.createTextNode(T('lbas')+' #'+(lb.ind+1)+'　'));
+      t.append($('span',null,T('nodiff',{n:a.equips.filter(Boolean).length})));
+      sec.append(t); lbg.append(sec); continue;
+    }
+    const art=$('article','comparison'+(n?' changed':''));
+    const hd=$('div','compare-head');
+    hd.append($('span','ship',T('lbas')+' #'+(lb.ind+1)));
+    hd.append($('span','diff-count',T('diffs',{n})));
+    const cols=$('div','columns');
+    for(const [side,d,other,isB] of [['a_side',a,b,false],['b_side',b,a,true]]){
+      const c=$('div','card'); c.append($('div','side',T(side)));
+      const eqs=$('div','equips'), m=Math.max(d.equips.length,other.equips.length);
+      for(let i=0;i<m;i++){
+        const e=d.equips[i], o=other.equips[i];
+        if(!e&&!o)continue;
+        const diff=!eqSame(e,o);
+        const row=$('div','equip lb'+(isB&&diff?' changed':''));
+        row.append($('span','slots',String(i+1)));
+        row.append(e&&e.img?icon('items/'+e.img+'.png','ic-eq',e.name):$('span'));
+        row.append(e?$('span','equip-name',e.name):$('span','equip-name none','—'));
+        row.append(e&&e.lv?$('span','imp','★'+e.lv):$('span'));
+        row.append((e&&profNode(e.rank))||$('span'));
+        const sl=d.slots[i];
+        row.append($('span','carry',sl!=null?String(sl):''));
+        eqs.append(row);
+      }
+      c.append(eqs); cols.append(c);
+    }
+    art.append(hd,cols); sec.append(art); lbg.append(sec);
+  }
+}
+function eshipRow(sp,kind){
+  const r=$('div','eship'+(kind?' '+kind:''));
+  if(kind)r.append($('span','mark',kind==='add'?'＋':'−'));
+  if(sp.img)r.append(icon('icons/'+sp.img,'',sp.name));
+  r.append($('span','en',sp.name+(sp.idx?'('+sp.idx+')':'')));
+  const ch=$('span','ch');
+  if(kind)ch.append($('span',null,'×'+sp.count));
+  else for(const c of (sp.changes||[])){
+    const e=$('span');
+    e.append($('i',null,T(c.field)),document.createTextNode(String(SWAP?c.b:c.a)+' → '));
+    e.append($('b',null,String(SWAP?c.a:c.b)));
+    ch.append(e);
+  }
+  r.append(ch); return r;
+}
+function renderEnemy(host){
+  const st=$('section','section-title'); st.append($('h1',null,T('sec_enemy'))); host.append(st);
+  for(const b of (CARDS.battles||[])){
+    const p=$('section','enemy-panel');
+    const hd=$('div','enemy-head');
+    hd.append($('b',null,T('node')+' '+(b.ind+1)+(b.letter?'（'+b.letter+'）':'')));
+    if(b.nodeType!=null){
+      const nimg=NODEIMG[b.nodeType];
+      if(nimg)hd.append(icon('maps/'+nimg+'.png','ic-node',T('bt'+b.nodeType)));
+      hd.append($('span',null,T('bt'+b.nodeType)));
+    }
+    hd.append($('span','enemy-count',T('diffs',{n:b.flags.length+b.comps.length})));
+    p.append(hd);
+    for(const f of b.flags){
+      const r=$('div','eflag');
+      const fmt=v=>f.field==='nodeType'?T('bt'+v):(f.field==='formation'?T('f'+v):String(v));
+      r.append($('div',null,T('bf_'+f.field)),
+        $('div',null,fmt(SWAP?f.b:f.a)),$('div','new',fmt(SWAP?f.a:f.b)));
+      p.append(r);
+    }
+    for(const c of b.comps){
+      const box=$('div','ecomp');
+      const chd=$('div','ecomp-hd');
+      chd.append($('b',null,T('comp')+' '+c.num));
+      if(c.onlySide)chd.append($('span',null,T('only_side',{s:c.onlySide})));
+      if(c.rateA!==c.rateB){
+        const rt=$('span','erate');
+        const ra=SWAP?c.rateB:c.rateA, rb=SWAP?c.rateA:c.rateB;
+        const pa=SWAP?c.pctB:c.pctA, pb=SWAP?c.pctA:c.pctB;
+        rt.append(document.createTextNode(T('rate')+' '+(ra==null?'—':ra+'（'+pa+'%）')+' → '));
+        rt.append($('span','new',rb==null?'—':rb+'（'+pb+'%）'));
+        chd.append(rt);
+      }
+      box.append(chd);
+      if(c.formA!=null&&c.formB!=null&&c.formA!==c.formB){
+        const r=$('div','eflag');
+        r.append($('div',null,T('bf_formation')),
+          $('div',null,T('f'+(SWAP?c.formB:c.formA))),
+          $('div','new',T('f'+(SWAP?c.formA:c.formB))));
+        box.append(r);
+      }
+      const added=SWAP?(c.removed||[]):(c.added||[]);
+      const removed=SWAP?(c.added||[]):(c.removed||[]);
+      for(const sp of added)box.append(eshipRow(sp,'add'));
+      for(const sp of removed)box.append(eshipRow(sp,'rm'));
+      for(const sp of (c.ships||[]))box.append(eshipRow(sp));
+      if(c.unchanged)box.append($('div','esame',T('same_ships',{n:c.unchanged})));
+      p.append(box);
+    }
+    host.append(p);
+  }
+}
+function renderSetting(host){
+  const st=$('section','section-title'); st.append($('h1',null,T('sec_setting'))); host.append(st);
+  const list=CARDS.settings||[];
+  for(const sc of [...new Set(list.map(f=>f.scope))]){
+    const p=$('section','settings-panel'); p.append($('header','settings-head',T('sg_'+sc)));
+    for(const f of list.filter(x=>x.scope===sc)){
+      const a=SWAP?f.b:f.a, b=SWAP?f.a:f.b;
+      const r=$('div','setting-row');
+      r.append($('div','label',T('set_'+f.field)),
+        $('div',null,fmtVal(a)),$('div','new',fmtVal(b)));
+      p.append(r);
+    }
+    host.append(p);
+  }
+}
+function fmtVal(v){
+  if(v===true)return T('yes'); if(v===false)return T('no');
+  if(v==null||v==='')return '—';
+  if(Array.isArray(v))return '['+v.map(x=>x==null?'-':x).join(',')+']';
+  if(typeof v==='object')return JSON.stringify(v);
+  return String(v);
+}
+function render(){
+  document.querySelectorAll('[data-t]').forEach(e=>e.textContent=T(e.dataset.t));
+  const sum=document.getElementById('summary'); sum.replaceChildren();
+  for(const s of sections()){
+    const b=$('button','sum'+(SEC===s.id?' active':'')); b.type='button';
+    b.append($('strong',null,String(s.n)),$('span',null,T(s.k)));
+    b.onclick=()=>{SEC=s.id;render();}; sum.append(b);
+  }
+  const fl=document.getElementById('filters'); fl.replaceChildren();
+  for(const s of sections()){
+    const b=$('button','filter'+(SEC===s.id?' on':'')); b.type='button'; b.textContent=T(s.k);
+    b.onclick=()=>{SEC=s.id;render();}; fl.append(b);
+  }
+  document.getElementById('profMode').textContent=T(PROFMODE==='img'?'prof_img':(PROFMODE==='sym'?'prof_sym':'prof_num'));
+  document.getElementById('theme').textContent=T(root.getAttribute('data-ui')==='light'?'theme_l':'theme_d');
+  document.getElementById('copyLink').textContent=T('copy');
+  const body=document.getElementById('body'); body.replaceChildren();
+  if(!READY)return;
+  if(SEC==='fleet')renderFleet(body); else if(SEC==='enemy')renderEnemy(body); else renderSetting(body);
+}
+
+/* 語言切換 */
+const langBox=document.getElementById('lang');
+for(const [code,label] of [['zh-Hant','中'],['ja','日'],['en','EN']]){
+  const b=$('button',null,label); b.type='button'; b.dataset.l=code;
+  b.setAttribute('aria-pressed',String(code===LANG));
+  b.onclick=()=>{LANG=code;localStorage.setItem('kcdiff-lang',code);
+    root.lang=code;langBox.querySelectorAll('button').forEach(x=>
+      x.setAttribute('aria-pressed',String(x.dataset.l===LANG)));render();};
+  langBox.append(b);
+}
+document.getElementById('theme').onclick=()=>{
+  const light=root.getAttribute('data-ui')==='light';
+  if(light)root.removeAttribute('data-ui'); else root.setAttribute('data-ui','light');
+  localStorage.setItem('kcdiff-theme',light?'dark':'light'); render();};
+if(localStorage.getItem('kcdiff-theme')==='light')root.setAttribute('data-ui','light');
+document.getElementById('profMode').onclick=()=>{PROFMODE=PROFMODE==='img'?'sym':(PROFMODE==='sym'?'num':'img');
+  localStorage.setItem('kcdiff-prof',PROFMODE);render();};
+document.getElementById('swapAB').onclick=()=>{SWAP=!SWAP;render();};
+document.getElementById('onlyDiff').onclick=e=>{ONLY=!ONLY;
+  e.currentTarget.setAttribute('aria-pressed',String(ONLY));render();};
+
+/* 比對連結 */
+function shareLink(){
+  if(!(SHARE.a&&SHARE.b))return null;
+  return location.origin+location.pathname+
+    '?a='+encodeURIComponent(SHARE.a)+'&b='+encodeURIComponent(SHARE.b);
+}
+document.getElementById('copyLink').onclick=()=>{
+  if(!(SHARE.a&&SHARE.b))return;
+  navigator.clipboard.writeText(shareLink());
+  const b=document.getElementById('copyLink'); b.textContent=T('copied');
+  setTimeout(()=>b.textContent=T('copy'),1400);};
+
+/* ── 主流程 ── */
+const statusEl=document.getElementById('status');
+function say(msg,isErr){statusEl.textContent=msg||'';statusEl.className='status'+(isErr?' err':'');}
+function updateShare(){
+  const url=shareLink();
+  document.getElementById('shareUrl').textContent=url||T('nolink');
+  document.getElementById('linkbox').classList.toggle('off',!url);
+  return url;
+}
+const ERRMSG={empty:'empty',unrecognised:'bad_input',unrecognised_url:'bad_input',
+  not_kcsim:'bad_file',read_failed:'bad_file'};
+function errText(e){
+  const k=ERRMSG[e&&e.message]|| (String(e&&e.message).startsWith('kcrdb_')?'kcrdb_fail':'load_fail');
+  return T(k);
+}
+let PENDING={a:null,b:null};
+async function runCompare(){
+  const va=document.getElementById('inA').value, vb=document.getElementById('inB').value;
+  say(T('loading'));
+  try{
+    const [ra,rb]=await Promise.all([
+      PENDING.a?Promise.resolve(PENDING.a):KCDB.loadOne(va),
+      PENDING.b?Promise.resolve(PENDING.b):KCDB.loadOne(vb)]);
+    CARDS=KCD.build(ra.save,rb.save,KCDB.names);
+    SHARE={a:ra.id,b:rb.id};
+    const url=updateShare();
+    if(url)history.replaceState(null,'','?a='+encodeURIComponent(SHARE.a)+'&b='+encodeURIComponent(SHARE.b));
+    READY=true; say(''); SEL={}; render();
+  }catch(e){console.error(e);READY=false;say(errText(e),true);}
+}
+document.getElementById('btnRun').onclick=runCompare;
+let pickSide='a';
+for(const [id,side] of [['btnFileA','a'],['btnFileB','b']])
+  document.getElementById(id).onclick=()=>{pickSide=side;document.getElementById('filePick').click();};
+document.getElementById('filePick').onchange=async e=>{
+  const f=e.target.files[0]; if(!f)return;
+  try{
+    const r=await KCDB.loadFile(f);
+    PENDING[pickSide]=r;
+    document.getElementById(pickSide==='a'?'inA':'inB').value=f.name;
+    say(T('file_ready',{n:f.name}));
+  }catch(err){say(errText(err),true);}
+  e.target.value='';
+};
+document.getElementById('inA').oninput=()=>{PENDING.a=null;};
+document.getElementById('inB').oninput=()=>{PENDING.b=null;};
+
+KCDB.loadStrings().then(({en,ja})=>{
+  UPSTREAM.en=en; UPSTREAM.ja=ja; root.lang=LANG;
+  const q=new URLSearchParams(location.search);
+  if(q.get('a')&&q.get('b')){
+    document.getElementById('inA').value='https://kc3kai.github.io/kancolle-replay/?s='+q.get('a');
+    document.getElementById('inB').value='https://kc3kai.github.io/kancolle-replay/?s='+q.get('b');
+    runCompare();
+  }else{ updateShare(); say(T('idle')); render(); }
+});
+render();
+</script>
+</body></html>

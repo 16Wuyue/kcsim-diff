@@ -1,0 +1,12 @@
+# 白名單：預設排除全部，只放行部署所需的檔案。
+/*
+
+!/.gitignore
+!/.nojekyll
+!/README.md
+!/index.html
+
+!/js/
+/js/*
+!/js/core.js
+!/js/browser.js
