@@ -14,12 +14,12 @@
   --text:#cccccc;--muted:#a7a7a7;--quiet:#87909b;--blue:#0078d4;
   --amber:#d29922;--amber-bg:rgba(210,153,34,.15);--amber-line:rgba(210,153,34,.62);
   --prof-blue:#4a84b5;--prof-gold:#d49c0a;--head:#ffffff;
-  --warn:#d29922;--warn-bg:rgba(210,153,34,.08);--warn-line:rgba(210,153,34,.35);--warn-text:#c7bfae}
+  --warn:#d29922;--warn-bg:rgba(210,153,34,.08);--warn-line:rgba(210,153,34,.35);--warn-text:#c7bfae;--err:#f48771}
 :root[data-ui="light"]{--bg:#fff;--canvas:#f8f8f8;--panel:#f3f3f3;--field:#fff;--line:#d4d4d4;--line-soft:#e5e5e5;
   --text:#3b3b3b;--muted:#5f6368;--quiet:#6e7681;--blue:#005fb8;
   --amber:#9a6700;--amber-bg:rgba(154,103,0,.11);--amber-line:rgba(154,103,0,.55);
   --prof-blue:#2f6690;--prof-gold:#8a6200;--head:#1b1b1b;
-  --warn:#9a6700;--warn-bg:#fff8e5;--warn-line:#e0c78a;--warn-text:#5c4a1f}
+  --warn:#9a6700;--warn-bg:#fff8e5;--warn-line:#e0c78a;--warn-text:#5c4a1f;--err:#c4314b}
 *{box-sizing:border-box}
 html{color-scheme:dark} html[data-ui="light"]{color-scheme:light}
 body{margin:0;background:var(--bg);color:var(--text);
@@ -53,13 +53,13 @@ button{font:inherit;color:inherit;cursor:pointer}
   color:var(--quiet);font-size:16.5px;line-height:1;padding:4px 6px;border-radius:3px;display:none}
 .clr:hover{color:var(--text);background:var(--line-soft);box-shadow:-6px 0 6px -2px var(--field)}
 .inwrap.filled .clr{display:block}
-.det{font:11.5px/1.6 Consolas,monospace;color:var(--quiet);min-height:17px;padding:2px 2px 0}
-.det.ok{color:var(--add,#3fb950)} .det.bad{color:var(--del,#f48771)} .det.file{color:var(--amber)}
 .inwrap.drop .url{border-color:var(--amber);background:var(--amber-bg)}
+.url.bad{border-color:var(--err)}
+.url.file{border-color:var(--amber)}
 .url{height:42px;width:100%;outline:none;border:1px solid var(--line);background:var(--field);border-radius:4px;padding:11px 36px 11px 11px;
   color:#aeb6c1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-family:Consolas,monospace;font-size:13px}
 :root[data-ui="light"] .url{color:#4a5157}
-.join{align-self:end;height:38px;display:flex;align-items:center;justify-content:center;
+.join{align-self:end;height:42px;display:flex;align-items:center;justify-content:center;
   color:var(--quiet);font-size:20px}
 .run{height:42px;border:0;border-radius:4px;background:var(--blue);padding:0 16px;font-weight:600;color:#fff}
 .filebtns{grid-column:1/-1;display:flex;gap:8px;margin:2px 0 0}
@@ -94,6 +94,8 @@ button{font:inherit;color:inherit;cursor:pointer}
 .lang button{border:0;background:var(--panel);padding:6px 9px;font-size:13px;color:var(--quiet)}
 .lang button[aria-pressed="true"]{background:var(--blue);color:#fff}
 
+.status{padding:24px 4px;color:var(--quiet);font-size:14.5px}
+.status.err{color:var(--err)}
 .section-title{display:flex;align-items:baseline;gap:10px;padding:26px 0 10px}
 .section-title h1{font-size:18.5px;margin:0;color:var(--head)}
 .scope-note{display:flex;align-items:flex-start;gap:9px;margin:0 0 14px;padding:9px 11px;
@@ -270,14 +272,12 @@ html[data-ui="light"] .ic-node{filter:none}
   <div class="source" id="srcA"><label><b>A</b> · <span data-t="base">基準設定</span></label>
     <div class="inwrap"><input class="url" id="inA" spellcheck="false" autocomplete="off"
       placeholder="?s=... / #backup=... / 拖入 .kcsim"><button class="clr" type="button" data-for="inA"
-      aria-label="clear">&times;</button></div>
-    <div class="det" id="detA"></div></div>
+      aria-label="clear">&times;</button></div></div>
   <div class="join">⇄</div>
   <div class="source" id="srcB"><label><b>B</b> · <span data-t="cmp">對照設定</span></label>
     <div class="inwrap"><input class="url" id="inB" spellcheck="false" autocomplete="off"
       placeholder="?s=... / #backup=... / 拖入 .kcsim"><button class="clr" type="button" data-for="inB"
-      aria-label="clear">&times;</button></div>
-    <div class="det" id="detB"></div></div>
+      aria-label="clear">&times;</button></div></div>
   <button class="run" type="button" id="btnRun" data-t="run">比對設定</button>
   <div class="filebtns"><button class="act" type="button" id="btnFileA">A ← .kcsim</button><button class="act" type="button" id="btnFileB">B ← .kcsim</button><input type="file" id="filePick" accept=".kcsim,application/json" style="display:none"></div><p class="hint" data-t="hint">支援共享連結、完整備份連結或 .kcsim 檔案。資料只在瀏覽器中處理。</p>
 </section>
@@ -801,20 +801,18 @@ document.getElementById('filePick').onchange=async e=>{
   e.target.value='';
 };
 
-/* 輸入形態即時偵測 */
+/* 輸入形態即時偵測：正常時不出聲，只有無法辨識或檔案模式才標示邊框 */
 function detect(side){
   const inp=document.getElementById(side==='a'?'inA':'inB');
-  const det=document.getElementById(side==='a'?'detA':'detB');
-  const wrap=inp.parentNode;
-  wrap.classList.toggle('filled',!!inp.value);
-  if(PENDING[side]){det.textContent=T('det_file')+'\uff1a'+(PENDING[side].fname||'');
-    det.className='det file';return;}
+  inp.parentNode.classList.toggle('filled',!!inp.value);
+  inp.classList.remove('bad','file');
+  if(PENDING[side]){inp.classList.add('file');inp.title=T('det_file');return;}
   const v=inp.value.trim();
-  if(!v){det.textContent='';det.className='det';return;}
+  if(!v){inp.title='';return;}
   const p=KCDB.parseInput(v);
-  if(p.kind==='id'){det.textContent=T('det_id')+'\uff1a'+p.id;det.className='det ok';}
-  else if(p.kind==='b64'){det.textContent=T('det_b64');det.className='det ok';}
-  else{det.textContent=T('det_bad');det.className='det bad';}
+  if(p.kind==='id'){inp.title=T('det_id')+'：'+p.id;}
+  else if(p.kind==='b64'){inp.title=T('det_b64');}
+  else{inp.classList.add('bad');inp.title=T('det_bad');}
 }
 for(const side of ['a','b']){
   const inp=document.getElementById(side==='a'?'inA':'inB');
